@@ -1,0 +1,35 @@
+services:
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build:
+      context: .
+    container_name: wish-mate
+    hostname: wish-mate
+    networks:
+      - wishnet
+    ports:
+      - "${PORT}:5000"
+    env_file: ".env"
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  postgres:
+    image: postgres:16.2
+    container_name: postgres
+    hostname: db
+    networks:
+      - wishnet
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres-data:/postgres/postgres-data
+
+volumes:
+  postgres-data:
+
+networks:
+  wishnet:
+    driver: bridge
