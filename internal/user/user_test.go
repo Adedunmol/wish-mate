@@ -11,28 +11,52 @@ import (
 	"testing"
 )
 
-var CreateUserError = errors.New("error creating user")
+var (
+	ErrCreate  = errors.New("error creating entry")
+	ErrNoEntry = errors.New("no entry found")
+)
 
 type StubUserStore struct {
-	users map[string]interface{}
+	users []user.User
 }
 
 func (s *StubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserResponse, error) {
+	userData := user.User{ID: 1, FirstName: body.FirstName, LastName: body.LastName, Username: body.Username, Email: body.Email, Password: body.Password}
 
-	return user.CreateUserResponse{ID: 1, FirstName: body.FirstName, LastName: body.LastName, Username: body.Username}, nil
+	s.users = append(s.users, userData)
+
+	return user.CreateUserResponse{ID: userData.ID, FirstName: userData.FirstName, LastName: userData.LastName, Username: userData.Username}, nil
+}
+
+func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
+	for _, user := range s.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return user.User{}, ErrNoEntry
 }
 
 type FailingStubUserStore struct {
-	users map[string]interface{}
+	users []user.User
 }
 
 func (s *FailingStubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserResponse, error) {
 
-	return user.CreateUserResponse{}, CreateUserError
+	return user.CreateUserResponse{}, ErrCreate
+}
+
+func (s *FailingStubUserStore) FindUserByEmail(email string) (user.User, error) {
+	for _, user := range s.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return user.User{}, ErrNoEntry
 }
 
 func TestPOSTUser(t *testing.T) {
-	store := StubUserStore{make(map[string]interface{})}
+	store := StubUserStore{users: make([]user.User, 0)}
 	server := &user.Handler{Store: &store}
 	t.Run("create and send a user back", func(t *testing.T) {
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
@@ -57,12 +81,15 @@ func TestPOSTUser(t *testing.T) {
 		}
 
 		assertResponseCode(t, response.Code, http.StatusCreated)
-
 		assertResponseBody(t, got, want)
+
+		if len(store.users) != 1 {
+			t.Errorf("got %d users, want 1", len(store.users))
+		}
 	})
 
 	t.Run("fails in creating user", func(t *testing.T) {
-		store := FailingStubUserStore{make(map[string]interface{})}
+		store := FailingStubUserStore{users: make([]user.User, 0)}
 		server := &user.Handler{Store: &store}
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
 

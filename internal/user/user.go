@@ -11,11 +11,21 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+type User struct {
+	ID        int
+	FirstName string
+	LastName  string
+	Username  string
+	Email     string
+	Password  string
+}
+
 type CreateUserBody struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Password  string `json:"password"`
 	Username  string `json:"username"`
+	Email     string `json:"email"`
 }
 
 type CreateUserResponse struct {
@@ -27,6 +37,7 @@ type CreateUserResponse struct {
 
 type Store interface {
 	CreateUser(body CreateUserBody) (CreateUserResponse, error)
+	FindUserByEmail(email string) (User, error)
 }
 
 type Handler struct {
