@@ -38,6 +38,7 @@ type CreateUserResponse struct {
 type Store interface {
 	CreateUser(body CreateUserBody) (CreateUserResponse, error)
 	FindUserByEmail(email string) (User, error)
+	ComparePasswords(candidatePassword string) bool
 }
 
 type Handler struct {
@@ -66,6 +67,9 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 	}
 
 	WriteJSONResponse(responseWriter, response, http.StatusCreated)
+}
+
+func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
 }
 
 func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, statusCode int) {
