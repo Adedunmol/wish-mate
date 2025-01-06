@@ -25,7 +25,7 @@ func (s *StubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserRes
 
 	for _, u := range s.users {
 		if u.Email == body.Email {
-			return user.CreateUserResponse{}, ErrCreate
+			return user.CreateUserResponse{}, ErrConflict
 		}
 	}
 
