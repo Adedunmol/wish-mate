@@ -29,12 +29,8 @@ func (s *StubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserRes
 }
 
 func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
-	for _, user := range s.users {
-		if user.Email == email {
-			return user, nil
-		}
-	}
-	return user.User{}, ErrNoEntry
+
+	return s.users[0], nil
 }
 
 type FailingStubUserStore struct {
@@ -47,19 +43,16 @@ func (s *FailingStubUserStore) CreateUser(body user.CreateUserBody) (user.Create
 }
 
 func (s *FailingStubUserStore) FindUserByEmail(email string) (user.User, error) {
-	for _, user := range s.users {
-		if user.Email == email {
-			return user, nil
-		}
-	}
 	return user.User{}, ErrNoEntry
 }
 
 func TestPOSTUser(t *testing.T) {
-	store := StubUserStore{users: make([]user.User, 0)}
-	server := &user.Handler{Store: &store}
+
 	t.Run("create and send a user back", func(t *testing.T) {
-		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
+		store := StubUserStore{users: make([]user.User, 0)}
+		server := &user.Handler{Store: &store}
+
+		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password", "email": "adedunmola@gmail.com" }`)
 
 		request := createUserRequest(data)
 		response := httptest.NewRecorder()
@@ -109,9 +102,49 @@ func TestPOSTUser(t *testing.T) {
 	})
 }
 
+func TestPOSTLogin(t *testing.T) {
+
+	t.Run("find and log in a user", func(t *testing.T) {
+		store := StubUserStore{users: []user.User{
+			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+		}}
+		server := &user.Handler{Store: &store}
+		data := []byte(`{ "email": "adedunmola@gmail.com", "password": "password" }`)
+
+		request := loginUserRequest(data)
+		response := httptest.NewRecorder()
+
+		server.LoginUserHandler(response, request)
+
+		var got map[string]interface{}
+		json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "User logged in successfully",
+			"data": map[string]interface{}{
+				"token":     "somerandomaccesstoken",
+				"expiresAt": float64(36000),
+			},
+		}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+	t.Run("does not find a user", func(t *testing.T) {})
+	t.Run("incorrect password", func(t *testing.T) {})
+}
+
 func createUserRequest(data []byte) *http.Request {
 
-	request, _ := http.NewRequest("POST", "/api/v1/users", bytes.NewReader(data))
+	request, _ := http.NewRequest("POST", "/api/v1/users/register", bytes.NewReader(data))
+
+	return request
+}
+
+func loginUserRequest(data []byte) *http.Request {
+
+	request, _ := http.NewRequest("POST", "/api/v1/users/login", bytes.NewReader(data))
 
 	return request
 }
