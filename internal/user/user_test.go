@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"net/http"
 	"net/http/httptest"
@@ -75,7 +74,6 @@ func TestPOSTUser(t *testing.T) {
 		var got map[string]interface{}
 		json.Unmarshal(response.Body.Bytes(), &got)
 
-		fmt.Println(got)
 		//want := map[string]interface{}{}
 
 		assertResponseCode(t, response.Code, http.StatusInternalServerError)

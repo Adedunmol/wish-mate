@@ -53,10 +53,15 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		Message: "User created successfully",
 		Data:    data,
 	}
-	responseWriter.Header().Set("Content-Type", "application/json")
-	responseWriter.WriteHeader(http.StatusCreated)
 
-	if err := json.NewEncoder(responseWriter).Encode(response); err != nil {
+	WriteJSONResponse(responseWriter, response, http.StatusCreated)
+}
+
+func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, statusCode int) {
+	responseWriter.Header().Set("Content-Type", "application/json")
+	responseWriter.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(responseWriter).Encode(data); err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
