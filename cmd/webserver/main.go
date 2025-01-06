@@ -9,7 +9,15 @@ import (
 )
 
 func main() {
+	defer handlePanics()
+
 	r := chi.NewRouter()
 
 	log.Fatal(http.ListenAndServe(os.Getenv("PORT"), r))
+}
+
+func handlePanics() {
+	if r := recover(); r != nil {
+		log.Printf("panic occurred: %v", r)
+	}
 }
