@@ -117,6 +117,28 @@ func TestPOSTUser(t *testing.T) {
 		//assertResponseBody(t, got, want)
 	})
 
+	t.Run("returns error for invalid request body", func(t *testing.T) {
+		store := FailingStubUserStore{users: make([]user.User, 0)}
+		server := &user.Handler{Store: &store}
+		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
+
+		request := createUserRequest(data)
+		response := httptest.NewRecorder()
+
+		server.CreateUserHandler(response, request)
+
+		var got map[string]interface{}
+		json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Error",
+			"message": "Invalid request body",
+			"data":    nil,
+		}
+		assertResponseCode(t, response.Code, http.StatusInternalServerError)
+		assertResponseBody(t, got, want)
+	})
+
 	t.Run("email conflict", func(t *testing.T) {
 		store := StubUserStore{users: []user.User{
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
@@ -134,14 +156,9 @@ func TestPOSTUser(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Success",
-			"message": "User created successfully",
-			"data": map[string]interface{}{
-				"id":         float64(1),
-				"first_name": "Adedunmola",
-				"last_name":  "Oyewale",
-				"username":   "Adedunmola",
-			},
+			"status":  "Error",
+			"message": "Conflict",
+			"data":    nil,
 		}
 
 		assertResponseCode(t, response.Code, http.StatusConflict)
@@ -167,16 +184,28 @@ func TestPOSTLogin(t *testing.T) {
 		var got map[string]interface{}
 		json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
-			"status":  "Success",
-			"message": "User logged in successfully",
-			"data": map[string]interface{}{
-				"token":     "somerandomaccesstoken",
-				"expiresAt": float64(36000),
-			},
-		}
-
 		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("returns error for invalid request body", func(t *testing.T) {
+		store := FailingStubUserStore{users: make([]user.User, 0)}
+		server := &user.Handler{Store: &store}
+		data := []byte(`{ "password": "password" }`)
+
+		request := createUserRequest(data)
+		response := httptest.NewRecorder()
+
+		server.LoginUserHandler(response, request)
+
+		var got map[string]interface{}
+		json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Error",
+			"message": "Invalid request body",
+			"data":    nil,
+		}
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 

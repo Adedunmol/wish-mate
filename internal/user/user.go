@@ -28,6 +28,11 @@ type CreateUserBody struct {
 	Email     string `json:"email"`
 }
 
+type LoginUserBody struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
 type CreateUserResponse struct {
 	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
@@ -70,6 +75,12 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 }
 
 func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	var body LoginUserBody
+	err := json.NewDecoder(request.Body).Decode(&body)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
 }
 
 func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, statusCode int) {
