@@ -2,7 +2,11 @@ package user
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/golang-jwt/jwt"
 	"net/http"
+	"os"
+	"time"
 )
 
 type Response struct {
@@ -43,7 +47,7 @@ type CreateUserResponse struct {
 type Store interface {
 	CreateUser(body CreateUserBody) (CreateUserResponse, error)
 	FindUserByEmail(email string) (User, error)
-	ComparePasswords(candidatePassword string) bool
+	ComparePasswords(storedPassword, candidatePassword string) bool
 }
 
 type Handler struct {
@@ -81,6 +85,31 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	data, err := h.Store.FindUserByEmail(body.Email)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	match := h.Store.ComparePasswords(data.Password, body.Password)
+	if !match {
+		http.Error(responseWriter, "Password does not match", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := generateToken(data.ID, data.Email)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	response := Response{
+		Status:  "Success",
+		Message: "User logged in",
+		Data:    map[string]interface{}{"token": token, "expiration": TokenExpiration},
+	}
+
+	WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
 func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, statusCode int) {
@@ -91,4 +120,24 @@ func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, status
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+const TokenExpiration = 30 * time.Minute
+
+func generateToken(userID int, email string) (string, error) {
+	var signingKey = []byte(os.Getenv("SECRET_KEY"))
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+
+	claims["email"] = email
+	claims["id"] = userID
+	claims["exp"] = time.Now().Add(TokenExpiration).Unix()
+
+	tokenString, err := token.SignedString(signingKey)
+	if err != nil {
+		fmt.Printf("error generating token: %s", err.Error())
+		return "", err
+	}
+
+	return tokenString, nil
 }

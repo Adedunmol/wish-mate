@@ -41,8 +41,8 @@ func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
 	return s.users[0], nil
 }
 
-func (s *StubUserStore) ComparePasswords(candidatePassword string) bool {
-	return s.users[0].Password == candidatePassword
+func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
+	return storedPassword == candidatePassword
 }
 
 type FailingStubUserStore struct {
@@ -58,7 +58,7 @@ func (s *FailingStubUserStore) FindUserByEmail(email string) (user.User, error) 
 	return user.User{}, ErrNoEntry
 }
 
-func (s *FailingStubUserStore) ComparePasswords(candidatePassword string) bool {
+func (s *FailingStubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
 	return false
 }
 
