@@ -21,7 +21,7 @@ type StubUserStore struct {
 	users []user.User
 }
 
-func (s *StubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserResponse, error) {
+func (s *StubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserResponse, error) {
 
 	for _, u := range s.users {
 		if u.Email == body.Email {
@@ -49,7 +49,7 @@ type FailingStubUserStore struct {
 	users []user.User
 }
 
-func (s *FailingStubUserStore) CreateUser(body user.CreateUserBody) (user.CreateUserResponse, error) {
+func (s *FailingStubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserResponse, error) {
 
 	return user.CreateUserResponse{}, ErrCreate
 }

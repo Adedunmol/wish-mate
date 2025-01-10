@@ -2,7 +2,9 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/golang-jwt/jwt"
 	"net/http"
 	"os"
@@ -25,14 +27,16 @@ type User struct {
 }
 
 type CreateUserBody struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Password  string `json:"password"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
+	helpers.Validation
+	FirstName string `json:"first_name",validate:"required"`
+	LastName  string `json:"last_name",validate:"required"`
+	Password  string `json:"password",validate:"required"`
+	Username  string `json:"username",validate:"required"`
+	Email     string `json:"email",validate:"required,email"`
 }
 
 type LoginUserBody struct {
+	helpers.Validation
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
@@ -45,7 +49,7 @@ type CreateUserResponse struct {
 }
 
 type Store interface {
-	CreateUser(body CreateUserBody) (CreateUserResponse, error)
+	CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 	FindUserByEmail(email string) (User, error)
 	ComparePasswords(storedPassword, candidatePassword string) bool
 }
@@ -56,10 +60,15 @@ type Handler struct {
 
 func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
-	var body CreateUserBody
-	err := json.NewDecoder(request.Body).Decode(&body)
-	if err != nil {
+	body, _, err := helpers.DecodeAndValidate[*CreateUserBody](request)
+	if err != nil && errors.Is(err, helpers.ErrValidate) {
+		fmt.Errorf("err (create user): %s", err)
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err != nil && errors.Is(err, helpers.ErrDecode) {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
