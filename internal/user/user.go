@@ -5,53 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
-	"github.com/golang-jwt/jwt"
 	"net/http"
-	"os"
-	"time"
 )
 
 type Response struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
-}
-
-type User struct {
-	ID        int
-	FirstName string
-	LastName  string
-	Username  string
-	Email     string
-	Password  string
-}
-
-type CreateUserBody struct {
-	helpers.Validation
-	FirstName string `json:"first_name",validate:"required"`
-	LastName  string `json:"last_name",validate:"required"`
-	Password  string `json:"password",validate:"required"`
-	Username  string `json:"username",validate:"required"`
-	Email     string `json:"email",validate:"required,email"`
-}
-
-type LoginUserBody struct {
-	helpers.Validation
-	Password string `json:"password"`
-	Email    string `json:"email"`
-}
-
-type CreateUserResponse struct {
-	ID        int    `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Username  string `json:"username"`
-}
-
-type Store interface {
-	CreateUser(body *CreateUserBody) (CreateUserResponse, error)
-	FindUserByEmail(email string) (User, error)
-	ComparePasswords(storedPassword, candidatePassword string) bool
 }
 
 type Handler struct {
@@ -107,7 +67,7 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 		return
 	}
 
-	token, err := generateToken(data.ID, data.Email)
+	token, err := helpers.GenerateToken(data.ID, data.Email)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
@@ -115,7 +75,7 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 	response := Response{
 		Status:  "Success",
 		Message: "User logged in",
-		Data:    map[string]interface{}{"token": token, "expiration": TokenExpiration},
+		Data:    map[string]interface{}{"token": token, "expiration": helpers.TokenExpiration},
 	}
 
 	WriteJSONResponse(responseWriter, response, http.StatusOK)
@@ -129,24 +89,4 @@ func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, status
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-const TokenExpiration = 30 * time.Minute
-
-func generateToken(userID int, email string) (string, error) {
-	var signingKey = []byte(os.Getenv("SECRET_KEY"))
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-
-	claims["email"] = email
-	claims["id"] = userID
-	claims["exp"] = time.Now().Add(TokenExpiration).Unix()
-
-	tokenString, err := token.SignedString(signingKey)
-	if err != nil {
-		fmt.Printf("error generating token: %s", err.Error())
-		return "", err
-	}
-
-	return tokenString, nil
 }
