@@ -9,6 +9,18 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /wish-mate
 
+# Development
+FROM build-stage AS dev-stage
+
+WORKDIR /app
+
+COPY --from=build-stage . .
+
+RUN go install github.com/air-verse/air@latest
+
+CMD ["air", "-c", ".air.toml"]
+
+
 # Run the tests in the container
 FROM build-stage AS run-test-stage
 RUN go test -v ./...
