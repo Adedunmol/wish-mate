@@ -21,7 +21,7 @@ services:
     extends:
       service: postgres
       file: docker-compose.base.yml
-      
+
 volumes:
   postgres-data:
 
