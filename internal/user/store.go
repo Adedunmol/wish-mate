@@ -61,9 +61,9 @@ func (s *UserStore) FindUserByEmail(email string) (User, error) {
 
 	var user User
 
-	row := tx.QueryRowContext(ctx, "SELECT id, username, email, first_name, last_name FROM users WHERE email = $1;", email)
+	row := tx.QueryRowContext(ctx, "SELECT id, username, email, first_name, last_name, password FROM users WHERE email = $1;", email)
 
-	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName)
+	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password)
 
 	if err != nil {
 		return User{}, fmt.Errorf("error scanning row (find user by email): %w", err)
