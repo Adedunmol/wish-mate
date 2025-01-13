@@ -32,6 +32,8 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
+	body.Password = bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+
 	data, err := h.Store.CreateUser(body)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
