@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 )
 
@@ -32,7 +33,14 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	body.Password = bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body.Password = string(hashedPassword)
 
 	data, err := h.Store.CreateUser(body)
 	if err != nil {

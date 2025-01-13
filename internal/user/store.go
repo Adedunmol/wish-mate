@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
