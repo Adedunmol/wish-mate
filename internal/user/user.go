@@ -24,19 +24,19 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 	body, _, err := helpers.DecodeAndValidate[*CreateUserBody](request)
 	if err != nil && errors.Is(err, helpers.ErrValidate) {
 		fmt.Errorf("err (create user): %s", err)
-		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
 		return
 	}
 
 	if err != nil && errors.Is(err, helpers.ErrDecode) {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error"))
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
 
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 
 	data, err := h.Store.CreateUser(body)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error"))
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		Data:    data,
 	}
 
-	WriteJSONResponse(responseWriter, response, http.StatusCreated)
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusCreated)
 }
 
 func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
@@ -88,15 +88,5 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 		Data:    map[string]interface{}{"token": token, "expiration": helpers.TokenExpiration},
 	}
 
-	WriteJSONResponse(responseWriter, response, http.StatusOK)
-}
-
-func WriteJSONResponse(responseWriter http.ResponseWriter, data Response, statusCode int) {
-	responseWriter.Header().Set("Content-Type", "application/json")
-	responseWriter.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(responseWriter).Encode(data); err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
