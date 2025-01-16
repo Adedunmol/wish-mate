@@ -3,7 +3,6 @@ package user
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -23,13 +22,14 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 
 	body, _, err := helpers.DecodeAndValidate[*CreateUserBody](request)
 	if err != nil && errors.Is(err, helpers.ErrValidate) {
-		fmt.Errorf("err (create user): %s", err)
 		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
 		return
 	}
 
-	if err != nil && errors.Is(err, helpers.ErrDecode) {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error"))
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
 		return
 	}
 
@@ -44,7 +44,15 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 
 	data, err := h.Store.CreateUser(body)
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error"))
+		var clientError helpers.ClientError
+		ok := errors.As(err, &clientError)
+
+		if ok {
+			helpers.HandleError(responseWriter, helpers.ErrConflict)
+			return
+		}
+
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
@@ -61,25 +69,25 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 	var body LoginUserBody
 	err := json.NewDecoder(request.Body).Decode(&body)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
 		return
 	}
 
 	data, err := h.Store.FindUserByEmail(body.Email)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
 	}
 
 	match := h.Store.ComparePasswords(data.Password, body.Password)
 	if !match {
-		http.Error(responseWriter, "Password does not match", http.StatusUnauthorized)
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
 	}
 
 	token, err := helpers.GenerateToken(data.ID, data.Email)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 	response := Response{

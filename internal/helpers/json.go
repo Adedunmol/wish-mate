@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	ErrDecode   = errors.New("error decoding json")
-	ErrValidate = errors.New("error validating json body")
+	ErrDecode = errors.New("error decoding json")
 )
 
 type Validator interface {
@@ -28,4 +27,14 @@ func DecodeAndValidate[V Validator](r *http.Request) (V, map[string][]string, er
 	}
 
 	return body, nil, nil
+}
+
+func WriteJSONResponse(responseWriter http.ResponseWriter, data interface{}, statusCode int) {
+	responseWriter.Header().Set("Content-Type", "application/json")
+	responseWriter.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(responseWriter).Encode(data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

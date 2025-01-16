@@ -8,8 +8,11 @@ import (
 )
 
 var (
-	ErrBadRequest   = NewHTTPError(nil, http.StatusBadRequest, "error validating request body")
-	ErrUnauthorized = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials")
+	ErrBadRequest   = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
+	ErrUnauthorized = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
+	ErrConflict     = NewHTTPError(nil, http.StatusConflict, "resource already exists", nil)
+	ErrValidate     = NewHTTPError(nil, http.StatusBadRequest, "error validating request body", nil)
+	ErrNotFound     = NewHTTPError(nil, http.StatusNotFound, "resource not found", nil)
 )
 
 type ClientError interface {
@@ -19,9 +22,10 @@ type ClientError interface {
 }
 
 type HTTPError struct {
-	Cause   error  `json:"-"`
-	Message string `json:"message"`
-	Status  int    `json:"-"`
+	Cause    error               `json:"-"`
+	Message  string              `json:"message"`
+	Status   int                 `json:"-"`
+	Problems map[string][]string `json:"problems,omitempty"`
 }
 
 func (e *HTTPError) Error() string {
@@ -45,11 +49,12 @@ func (e *HTTPError) ResponseHeaders() (int, map[string]string) {
 	}
 }
 
-func NewHTTPError(err error, status int, message string) error {
+func NewHTTPError(err error, status int, message string, problems map[string][]string) error {
 	return &HTTPError{
-		Cause:   err,
-		Message: message,
-		Status:  status,
+		Cause:    err,
+		Message:  message,
+		Status:   status,
+		Problems: problems,
 	}
 }
 
@@ -69,6 +74,12 @@ func HandleError(responseWriter http.ResponseWriter, err error) {
 	for k, v := range headers {
 		responseWriter.Header().Add(k, v)
 	}
+
+	//body, err := clientError.ResponseBody()
+	//if err != nil {
+	//	log.Printf("an error occurred: %s", err)
+	//	WriteJSONResponse(responseWriter, nil, http.StatusInternalServerError)
+	//}
 
 	WriteJSONResponse(responseWriter, clientError, status)
 }

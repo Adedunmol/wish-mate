@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +13,8 @@ import (
 )
 
 var (
-	ErrCreate   = errors.New("error creating entry")
-	ErrNoEntry  = errors.New("no entry found")
-	ErrConflict = errors.New("conflict")
+	ErrCreate  = errors.New("error creating entry")
+	ErrNoEntry = errors.New("no entry found")
 )
 
 type StubUserStore struct {
@@ -25,7 +25,7 @@ func (s *StubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserRe
 
 	for _, u := range s.users {
 		if u.Email == body.Email {
-			return user.CreateUserResponse{}, ErrConflict
+			return user.CreateUserResponse{}, helpers.ErrConflict
 		}
 	}
 
@@ -38,7 +38,12 @@ func (s *StubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserRe
 
 func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
 
-	return s.users[0], nil
+	for _, u := range s.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return user.User{}, helpers.ErrNotFound
 }
 
 func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
@@ -120,7 +125,7 @@ func TestPOSTUser(t *testing.T) {
 	t.Run("returns error for invalid request body", func(t *testing.T) {
 		store := FailingStubUserStore{users: make([]user.User, 0)}
 		server := &user.Handler{Store: &store}
-		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
+		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola" }`)
 
 		request := createUserRequest(data)
 		response := httptest.NewRecorder()
@@ -131,9 +136,7 @@ func TestPOSTUser(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Error",
-			"message": "Invalid request body",
-			"data":    nil,
+			"message": "invalid request body",
 		}
 		assertResponseCode(t, response.Code, http.StatusInternalServerError)
 		assertResponseBody(t, got, want)
@@ -156,9 +159,7 @@ func TestPOSTUser(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Error",
-			"message": "Conflict",
-			"data":    nil,
+			"message": "resource already exists",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusConflict)
@@ -201,9 +202,7 @@ func TestPOSTLogin(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Error",
-			"message": "Invalid request body",
-			"data":    nil,
+			"message": "invalid request body",
 		}
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
@@ -221,12 +220,10 @@ func TestPOSTLogin(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Error",
-			"message": "Invalid credentials",
-			"data":    nil,
+			"message": "invalid credentials",
 		}
 
-		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
 		assertResponseBody(t, got, want)
 	})
 
@@ -243,9 +240,7 @@ func TestPOSTLogin(t *testing.T) {
 		json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"status":  "Error",
-			"message": "Invalid credentials",
-			"data":    nil,
+			"message": "invalid credentials",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusUnauthorized)
