@@ -54,16 +54,16 @@ type FailingStubUserStore struct {
 	users []user.User
 }
 
-func (s *FailingStubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserResponse, error) {
+func (s *FailingStubUserStore) CreateUser(_ *user.CreateUserBody) (user.CreateUserResponse, error) {
 
 	return user.CreateUserResponse{}, ErrCreate
 }
 
-func (s *FailingStubUserStore) FindUserByEmail(email string) (user.User, error) {
+func (s *FailingStubUserStore) FindUserByEmail(_ string) (user.User, error) {
 	return user.User{}, ErrNoEntry
 }
 
-func (s *FailingStubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
+func (s *FailingStubUserStore) ComparePasswords(_, _ string) bool {
 	return false
 }
 
@@ -81,7 +81,7 @@ func TestPOSTUser(t *testing.T) {
 		server.CreateUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"status":  "Success",
@@ -113,7 +113,7 @@ func TestPOSTUser(t *testing.T) {
 		server.CreateUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		//want := map[string]interface{}{}
 
@@ -133,7 +133,7 @@ func TestPOSTUser(t *testing.T) {
 		server.CreateUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"message": "invalid request body",
@@ -160,7 +160,7 @@ func TestPOSTUser(t *testing.T) {
 		server.CreateUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"message": "resource already exists",
@@ -187,7 +187,7 @@ func TestPOSTLogin(t *testing.T) {
 		server.LoginUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		assertResponseCode(t, response.Code, http.StatusOK)
 	})
@@ -203,7 +203,7 @@ func TestPOSTLogin(t *testing.T) {
 		server.LoginUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"message": "invalid request body",
@@ -224,7 +224,7 @@ func TestPOSTLogin(t *testing.T) {
 		server.LoginUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"message": "invalid credentials",
@@ -244,7 +244,7 @@ func TestPOSTLogin(t *testing.T) {
 		server.LoginUserHandler(response, request)
 
 		var got map[string]interface{}
-		json.Unmarshal(response.Body.Bytes(), &got)
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"message": "invalid credentials",
