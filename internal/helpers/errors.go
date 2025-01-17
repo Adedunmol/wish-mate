@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	ErrDecode       = NewHTTPError(nil, http.StatusInternalServerError, "error decoding json body", nil)
 	ErrBadRequest   = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
 	ErrUnauthorized = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
 	ErrConflict     = NewHTTPError(nil, http.StatusConflict, "resource already exists", nil)

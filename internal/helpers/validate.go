@@ -1,13 +1,12 @@
 package helpers
 
 import (
-	"context"
 	"github.com/go-playground/validator/v10"
 )
 
 type Validation struct{}
 
-func (vs *Validation) Validate(data context.Context) map[string][]string {
+func (vs *Validation) Validate(data interface{}) map[string][]string {
 	fieldErrors := make(map[string][]string)
 
 	v := validator.New(validator.WithRequiredStructEnabled())

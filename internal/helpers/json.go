@@ -1,19 +1,13 @@
 package helpers
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 )
 
-var (
-	ErrDecode = errors.New("error decoding json")
-)
-
 type Validator interface {
-	Validate(data context.Context) map[string][]string
+	Validate(data interface{}) map[string][]string
 }
 
 func DecodeAndValidate[V Validator](r *http.Request) (V, map[string][]string, error) {
@@ -22,8 +16,8 @@ func DecodeAndValidate[V Validator](r *http.Request) (V, map[string][]string, er
 		return body, nil, fmt.Errorf("%s: %s", ErrDecode, err)
 	}
 
-	if validationErrors := body.Validate(r.Context()); len(validationErrors) != 0 {
-		return body, nil, ErrValidate
+	if validationErrors := body.Validate(body); len(validationErrors) != 0 {
+		return body, validationErrors, ErrValidate
 	}
 
 	return body, nil, nil

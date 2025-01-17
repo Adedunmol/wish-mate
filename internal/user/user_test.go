@@ -137,8 +137,12 @@ func TestPOSTUser(t *testing.T) {
 
 		want := map[string]interface{}{
 			"message": "invalid request body",
+			"problems": map[string][]string{
+				"Email":    []string{"Email required"},
+				"Password": []string{"Password required"},
+			},
 		}
-		assertResponseCode(t, response.Code, http.StatusInternalServerError)
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 
@@ -203,6 +207,9 @@ func TestPOSTLogin(t *testing.T) {
 
 		want := map[string]interface{}{
 			"message": "invalid request body",
+			"problems": map[string][]string{
+				"Email": []string{"Email required"},
+			},
 		}
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)

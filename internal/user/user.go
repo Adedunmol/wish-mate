@@ -1,7 +1,6 @@
 package user
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"golang.org/x/crypto/bcrypt"
@@ -20,16 +19,18 @@ type Handler struct {
 
 func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
-	body, _, err := helpers.DecodeAndValidate[*CreateUserBody](request)
-	if err != nil && errors.Is(err, helpers.ErrValidate) {
-		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
-		return
-	}
+	body, problems, err := helpers.DecodeAndValidate[*CreateUserBody](request)
 
 	var clientError helpers.ClientError
 	ok := errors.As(err, &clientError)
-	if err != nil && ok {
+
+	if err != nil && problems == nil {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
 		return
 	}
 
@@ -66,10 +67,18 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 }
 
 func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
-	var body LoginUserBody
-	err := json.NewDecoder(request.Body).Decode(&body)
-	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+	body, problems, err := helpers.DecodeAndValidate[*LoginUserBody](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
 		return
 	}
 
