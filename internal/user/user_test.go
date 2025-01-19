@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,15 @@ var (
 	ErrCreate  = errors.New("error creating entry")
 	ErrNoEntry = errors.New("no entry found")
 )
+
+type StubQueue struct {
+	Tasks []queue.TaskPayload
+}
+
+func (q *StubQueue) Enqueue(taskPayload *queue.TaskPayload) error {
+	q.Tasks = append(q.Tasks, *taskPayload)
+	return nil
+}
 
 type StubUserStore struct {
 	users []user.User
@@ -71,7 +81,8 @@ func TestPOSTUser(t *testing.T) {
 
 	t.Run("create and send a user back", func(t *testing.T) {
 		store := StubUserStore{users: make([]user.User, 0)}
-		server := &user.Handler{Store: &store}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+		server := &user.Handler{Store: &store, Queue: &mockQueue}
 
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password", "email": "adedunmola@gmail.com" }`)
 
@@ -104,7 +115,8 @@ func TestPOSTUser(t *testing.T) {
 
 	t.Run("fails in creating user", func(t *testing.T) {
 		store := FailingStubUserStore{users: make([]user.User, 0)}
-		server := &user.Handler{Store: &store}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+		server := &user.Handler{Store: &store, Queue: &mockQueue}
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password" }`)
 
 		request := createUserRequest(data)
@@ -124,7 +136,8 @@ func TestPOSTUser(t *testing.T) {
 
 	t.Run("returns error for invalid request body", func(t *testing.T) {
 		store := FailingStubUserStore{users: make([]user.User, 0)}
-		server := &user.Handler{Store: &store}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+		server := &user.Handler{Store: &store, Queue: &mockQueue}
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola" }`)
 
 		request := createUserRequest(data)
@@ -150,7 +163,9 @@ func TestPOSTUser(t *testing.T) {
 		store := StubUserStore{users: []user.User{
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		}}
-		server := &user.Handler{Store: &store}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+
+		server := &user.Handler{Store: &store, Queue: &mockQueue}
 
 		data := []byte(`{ "first_name": "Adedunmola", "last_name": "Oyewale", "username": "Adedunmola", "password": "password", "email": "adedunmola@gmail.com" }`)
 
