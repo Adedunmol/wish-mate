@@ -3,7 +3,9 @@ package user
 import (
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"github.com/Adedunmol/wish-mate/internal/queue"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"net/http"
 )
 
@@ -15,6 +17,7 @@ type Response struct {
 
 type Handler struct {
 	Store Store
+	Queue queue.Queue
 }
 
 func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
@@ -61,6 +64,20 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		Status:  "Success",
 		Message: "User created successfully",
 		Data:    data,
+	}
+
+	err = h.Queue.Enqueue(&queue.TaskPayload{
+		Type: queue.TypeEmailDelivery,
+		Payload: map[string]interface{}{
+			"email":    body.Email,
+			"template": "register",
+			"subject":  "register",
+			"data":     map[string]interface{}{},
+		},
+	})
+
+	if err != nil {
+		log.Printf("error enqueuing email task: %s", err)
 	}
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusCreated)
