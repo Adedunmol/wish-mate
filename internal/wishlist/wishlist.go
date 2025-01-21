@@ -41,7 +41,7 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	user, err := h.UserStore.FindUserByEmail(email.(string))
+	userData, err := h.UserStore.FindUserByEmail(email.(string))
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
@@ -53,7 +53,7 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 		Items:       body.Items,
 	}
 
-	data, err := h.Store.CreateWishlist(user.ID, wishlist)
+	data, err := h.Store.CreateWishlist(userData.ID, wishlist)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
