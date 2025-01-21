@@ -12,7 +12,7 @@ import (
 
 type Task interface {
 	NewTask() (*asynq.Task, error)
-	HandleTask(ctx context.Context, t *asynq.Task) error
+	//HandleTask(ctx context.Context, t *asynq.Task) error
 }
 
 type TaskPayload struct {
@@ -88,7 +88,7 @@ func (qc *Client) Run(ctx context.Context) error {
 
 	mux := asynq.NewServeMux()
 
-	mux.HandleFunc(TypeEmailDelivery, EmailDeliveryPayload{}.HandleTask)
+	mux.HandleFunc(TypeEmailDelivery, HandleEmailTask)
 
 	if err := queueServer.Run(mux); err != nil {
 		return fmt.Errorf("error running queue server: %v", err)

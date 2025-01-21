@@ -27,7 +27,7 @@ func (e *EmailDeliveryPayload) NewTask() (*asynq.Task, error) {
 	return asynq.NewTask(TypeEmailDelivery, payload), nil
 }
 
-func (e *EmailDeliveryPayload) HandleTask(ctx context.Context, t *asynq.Task) error {
+func HandleEmailTask(ctx context.Context, t *asynq.Task) error {
 	var payload EmailDeliveryPayload
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 		return fmt.Errorf("error decoding email delivery payload: %w", err)

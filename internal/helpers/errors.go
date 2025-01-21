@@ -8,12 +8,13 @@ import (
 )
 
 var (
-	ErrDecode       = NewHTTPError(nil, http.StatusInternalServerError, "error decoding json body", nil)
-	ErrBadRequest   = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
-	ErrUnauthorized = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
-	ErrConflict     = NewHTTPError(nil, http.StatusConflict, "resource already exists", nil)
-	ErrValidate     = NewHTTPError(nil, http.StatusBadRequest, "error validating request body", nil)
-	ErrNotFound     = NewHTTPError(nil, http.StatusNotFound, "resource not found", nil)
+	ErrDecode              = NewHTTPError(nil, http.StatusInternalServerError, "error decoding json body", nil)
+	ErrBadRequest          = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
+	ErrUnauthorized        = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
+	ErrConflict            = NewHTTPError(nil, http.StatusConflict, "resource already exists", nil)
+	ErrValidate            = NewHTTPError(nil, http.StatusBadRequest, "error validating request body", nil)
+	ErrNotFound            = NewHTTPError(nil, http.StatusNotFound, "resource not found", nil)
+	ErrInternalServerError = NewHTTPError(nil, http.StatusInternalServerError, "internal server error", nil)
 )
 
 type ClientError interface {

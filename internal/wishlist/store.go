@@ -1,8 +1,8 @@
 package wishlist
 
 type Store interface {
-	CreateWishlist(body interface{}) (interface{}, error)
-	GetWishlistByID(id int, verbose bool) (interface{}, error)
-	UpdateWishlistByID(id int, body interface{}) (interface{}, error)
+	CreateWishlist(userID int, body Wishlist) (WishlistResponse, error)
+	GetWishlistByID(id int, verbose bool) (WishlistResponse, error)
+	UpdateWishlistByID(id int, body Wishlist) (WishlistResponse, error)
 	DeleteWishlistByID(id int) error
 }

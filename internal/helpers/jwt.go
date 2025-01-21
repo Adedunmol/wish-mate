@@ -26,3 +26,21 @@ func GenerateToken(userID int, email string) (string, error) {
 
 	return tokenString, nil
 }
+
+func DecodeToken(tokenString string) (string, error) {
+	var err error
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("SECRET_KEY")), nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("error parsing token: %v", err)
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims["email"].(string), nil
+	}
+	return "", fmt.Errorf("invalid token")
+}
