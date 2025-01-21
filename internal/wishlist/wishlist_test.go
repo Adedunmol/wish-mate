@@ -66,11 +66,13 @@ func (s *StubWishlistStore) DeleteWishlistByID(id int) error {
 }
 
 func TestCreateWishlist(t *testing.T) {
+	store := StubWishlistStore{wishlists: make([]wishlist.Wishlist, 0)}
+	userStore := StubUserStore{users: []user.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+	}}
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 	t.Run("create and return a wishlist (with items)", func(t *testing.T) {
-		store := StubWishlistStore{wishlists: make([]wishlist.Wishlist, 0)}
-		userStore := StubUserStore{users: make([]user.User, 0)}
-		server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 		data := map[string]interface{}{
 			"name":        "Birthday list",
@@ -109,7 +111,95 @@ func TestCreateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("returns error for invalid request body", func(t *testing.T) {})
+	t.Run("create and return a wishlist (without items)", func(t *testing.T) {
+
+		data := map[string]interface{}{
+			"name":        "Birthday list",
+			"description": "some random description",
+		}
+
+		body, _ := json.Marshal(data)
+		request := createWishlistRequest(body)
+		response := httptest.NewRecorder()
+
+		server.CreateWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlist created successfully",
+			"data": map[string]interface{}{
+				"id":          float64(1),
+				"user_id":     float64(1),
+				"name":        "Birthday list",
+				"description": "some random description",
+			},
+		}
+
+		assertResponseCode(t, response.Code, http.StatusCreated)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return error if no user is found with the email attached", func(t *testing.T) {
+
+		data := map[string]interface{}{
+			"name":        "Birthday list",
+			"description": "some random description",
+		}
+
+		body, _ := json.Marshal(data)
+		request := createWishlistRequest(body)
+		response := httptest.NewRecorder()
+
+		server.CreateWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "invalid credentials",
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("returns error for invalid request body", func(t *testing.T) {
+		data := map[string]interface{}{
+			"description": "some random description",
+		}
+
+		body, _ := json.Marshal(data)
+		request := createWishlistRequest(body)
+		response := httptest.NewRecorder()
+
+		server.CreateWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "invalid request body",
+			"problems": map[string][]string{
+				"Name": []string{"Name required"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestGetWishlist(t *testing.T) {
