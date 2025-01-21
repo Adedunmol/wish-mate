@@ -111,6 +111,10 @@ func TestPOSTUser(t *testing.T) {
 		if len(store.users) != 1 {
 			t.Errorf("got %d users, want 1", len(store.users))
 		}
+
+		if len(mockQueue.Tasks) != 1 {
+			t.Errorf("got %d tasks, want 1", len(mockQueue.Tasks))
+		}
 	})
 
 	t.Run("fails in creating user", func(t *testing.T) {
@@ -148,15 +152,25 @@ func TestPOSTUser(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
+		wantBody := map[string]interface{}{
 			"message": "invalid request body",
 			"problems": map[string][]string{
 				"Email":    []string{"Email required"},
 				"Password": []string{"Password required"},
 			},
 		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
+
+		if len(mockQueue.Tasks) == 1 {
+			t.Errorf("got %d tasks, want 0", len(mockQueue.Tasks))
+		}
 	})
 
 	t.Run("email conflict", func(t *testing.T) {
@@ -183,6 +197,10 @@ func TestPOSTUser(t *testing.T) {
 
 		assertResponseCode(t, response.Code, http.StatusConflict)
 		assertResponseBody(t, got, want)
+
+		if len(mockQueue.Tasks) == 1 {
+			t.Errorf("got %d tasks, want 0", len(mockQueue.Tasks))
+		}
 	})
 }
 
@@ -220,14 +238,21 @@ func TestPOSTLogin(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
+		wantBody := map[string]interface{}{
 			"message": "invalid request body",
 			"problems": map[string][]string{
 				"Email": []string{"Email required"},
 			},
 		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
+
 	})
 
 	t.Run("does not find a user", func(t *testing.T) {
