@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
+	"log"
+	"os"
+	"sync"
 )
 
 type Task interface {
@@ -22,6 +26,7 @@ type Queue interface {
 
 type Client struct {
 	client *asynq.Client
+	once   sync.Once
 }
 
 func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
@@ -46,5 +51,47 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 		}
 	}
 
+	return nil
+}
+
+func (qc *Client) Init(ctx context.Context) error {
+	addr, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		return fmt.Errorf("error parsing redis url: %v", err)
+	}
+
+	qc.once.Do(func() {
+		log.Printf("setting up connection for asynq redis queue")
+
+		qc.client = asynq.NewClient(asynq.RedisClientOpt{Addr: addr.Addr, Password: "", DB: 0})
+	})
+
+	return nil
+}
+
+func (qc *Client) GetClient() *asynq.Client {
+	return qc.client
+}
+
+func (qc *Client) Close() error {
+	log.Println("closing connection to asynq queue")
+	return fmt.Errorf("error closing connection: %v", qc.client.Close())
+}
+
+func (qc *Client) Run(ctx context.Context) error {
+	addr, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		return fmt.Errorf("error parsing redis url: %v", err)
+	}
+
+	queueServer := asynq.NewServer(asynq.RedisClientOpt{Addr: addr.Addr}, asynq.Config{})
+
+	mux := asynq.NewServeMux()
+
+	mux.HandleFunc(TypeEmailDelivery, EmailDeliveryPayload{}.HandleTask)
+
+	if err := queueServer.Run(mux); err != nil {
+		return fmt.Errorf("error running queue server: %v", err)
+	}
 	return nil
 }
