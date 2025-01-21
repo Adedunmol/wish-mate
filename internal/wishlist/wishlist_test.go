@@ -2,6 +2,7 @@ package wishlist_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/user"
@@ -84,7 +85,7 @@ func TestCreateWishlist(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(data)
-		request := createWishlistRequest(body)
+		request := createWishlistRequest(body, "adedunmola@gmail.com")
 		response := httptest.NewRecorder()
 
 		server.CreateWishlist(response, request)
@@ -119,7 +120,7 @@ func TestCreateWishlist(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(data)
-		request := createWishlistRequest(body)
+		request := createWishlistRequest(body, "adedunmola@gmail.com")
 		response := httptest.NewRecorder()
 
 		server.CreateWishlist(response, request)
@@ -150,7 +151,7 @@ func TestCreateWishlist(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(data)
-		request := createWishlistRequest(body)
+		request := createWishlistRequest(body, "adedunmola123@gmail.com")
 		response := httptest.NewRecorder()
 
 		server.CreateWishlist(response, request)
@@ -177,7 +178,7 @@ func TestCreateWishlist(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(data)
-		request := createWishlistRequest(body)
+		request := createWishlistRequest(body, "adedunmola@gmail.com")
 		response := httptest.NewRecorder()
 
 		server.CreateWishlist(response, request)
@@ -247,9 +248,10 @@ func assertResponseBody(t *testing.T, got, want map[string]interface{}) {
 	}
 }
 
-func createWishlistRequest(data []byte) *http.Request {
+func createWishlistRequest(data []byte, email string) *http.Request {
 
-	request, _ := http.NewRequest(http.MethodPost, "/wishlist", bytes.NewReader(data))
+	ctx := context.WithValue(context.Background(), "email", email)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, "/wishlist", bytes.NewReader(data))
 
 	return request
 }
