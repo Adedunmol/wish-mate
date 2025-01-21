@@ -3,6 +3,8 @@ package wishlist_test
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"net/http"
 	"net/http/httptest"
@@ -10,31 +12,65 @@ import (
 	"testing"
 )
 
-type Store struct {
+type StubUserStore struct {
+	users []user.User
+}
+
+func (s *StubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserResponse, error) {
+
+	for _, u := range s.users {
+		if u.Email == body.Email {
+			return user.CreateUserResponse{}, helpers.ErrConflict
+		}
+	}
+
+	userData := user.User{ID: 1, FirstName: body.FirstName, LastName: body.LastName, Username: body.Username, Email: body.Email, Password: body.Password}
+
+	s.users = append(s.users, userData)
+
+	return user.CreateUserResponse{ID: userData.ID, FirstName: userData.FirstName, LastName: userData.LastName, Username: userData.Username}, nil
+}
+
+func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
+
+	for _, u := range s.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return user.User{}, helpers.ErrNotFound
+}
+
+func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
+	return storedPassword == candidatePassword
+}
+
+type StubWishlistStore struct {
 	wishlists []wishlist.Wishlist
 }
 
-func (s *Store) CreateWishlist(userID int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
+func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
 	return wishlist.WishlistResponse{}, nil
 }
 
-func (s *Store) GetWishlistByID(id int, verbose bool) (wishlist.WishlistResponse, error) {
+func (s *StubWishlistStore) GetWishlistByID(id int, verbose bool) (wishlist.WishlistResponse, error) {
 	return wishlist.WishlistResponse{}, nil
 }
 
-func (s *Store) UpdateWishlistByID(id int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
+func (s *StubWishlistStore) UpdateWishlistByID(id int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
 	return wishlist.WishlistResponse{}, nil
 }
 
-func (s *Store) DeleteWishlistByID(id int) error {
+func (s *StubWishlistStore) DeleteWishlistByID(id int) error {
 	return nil
 }
 
 func TestCreateWishlist(t *testing.T) {
 
 	t.Run("create and return a wishlist (with items)", func(t *testing.T) {
-		store := Store{wishlists: make([]wishlist.Wishlist, 0)}
-		server := wishlist.Handler{Store: &store}
+		store := StubWishlistStore{wishlists: make([]wishlist.Wishlist, 0)}
+		userStore := StubUserStore{users: make([]user.User, 0)}
+		server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 		data := map[string]interface{}{
 			"name":        "Birthday list",
