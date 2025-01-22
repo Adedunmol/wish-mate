@@ -413,7 +413,7 @@ func createWishlistRequest(data []byte, email string) *http.Request {
 func getWishlistRequest(userID, wishlistID int) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "id", userID)
-	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlist/%s", string(wishlistID)), nil)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlist/%s", fmt.Sprint(wishlistID)), nil)
 
 	return request
 }
