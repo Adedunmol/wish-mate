@@ -48,9 +48,10 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 	}
 
 	wishlist := Wishlist{
-		Name:        body.Name,
-		Description: body.Description,
-		Items:       body.Items,
+		Name:         body.Name,
+		Description:  body.Description,
+		Items:        body.Items,
+		NotifyBefore: body.NotifyBefore,
 	}
 
 	data, err := h.Store.CreateWishlist(userData.ID, wishlist)
@@ -62,7 +63,7 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 
 	response := Response{
 		Status:  "Success",
-		Message: "User created successfully",
+		Message: "Wishlist created successfully",
 		Data:    data,
 	}
 

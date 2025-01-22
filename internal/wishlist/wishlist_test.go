@@ -47,11 +47,37 @@ func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword strin
 }
 
 type StubWishlistStore struct {
-	wishlists []wishlist.Wishlist
+	wishlists []wishlist.WishlistResponse
 }
 
 func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
-	return wishlist.WishlistResponse{}, nil
+
+	var items []wishlist.ItemResponse
+	id := 1
+	for _, item := range body.Items {
+		items = append(items, wishlist.ItemResponse{
+			ID:          id,
+			Name:        item.Name,
+			Description: item.Description,
+			Whole:       item.Whole,
+			Taken:       false,
+		})
+
+		id += 1
+	}
+
+	wishlistData := wishlist.WishlistResponse{
+		ID:           1,
+		UserID:       userID,
+		Name:         body.Name,
+		Description:  body.Description,
+		NotifyBefore: body.NotifyBefore,
+		Items:        items,
+	}
+
+	s.wishlists = append(s.wishlists, wishlistData)
+
+	return wishlistData, nil
 }
 
 func (s *StubWishlistStore) GetWishlistByID(id int, verbose bool) (wishlist.WishlistResponse, error) {
@@ -67,7 +93,7 @@ func (s *StubWishlistStore) DeleteWishlistByID(id int) error {
 }
 
 func TestCreateWishlist(t *testing.T) {
-	store := StubWishlistStore{wishlists: make([]wishlist.Wishlist, 0)}
+	store := StubWishlistStore{wishlists: make([]wishlist.WishlistResponse, 0)}
 	userStore := StubUserStore{users: []user.User{
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 	}}
@@ -94,7 +120,7 @@ func TestCreateWishlist(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
+		wantBody := map[string]interface{}{
 			"status":  "Success",
 			"message": "Wishlist created successfully",
 			"data": map[string]interface{}{
@@ -102,13 +128,18 @@ func TestCreateWishlist(t *testing.T) {
 				"user_id":       float64(1),
 				"name":          "Birthday list",
 				"description":   "some random description",
-				"notify_before": 7,
+				"notify_before": float64(7),
 				"items": []map[string]interface{}{
 					{"id": float64(1), "name": "phone", "description": "", "whole": true, "taken": false},
 					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
 				},
 			},
 		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
 
 		assertResponseCode(t, response.Code, http.StatusCreated)
 		assertResponseBody(t, got, want)
@@ -139,7 +170,7 @@ func TestCreateWishlist(t *testing.T) {
 				"user_id":       float64(1),
 				"name":          "Birthday list",
 				"description":   "some random description",
-				"notify_before": 7,
+				"notify_before": float64(7),
 			},
 		}
 
