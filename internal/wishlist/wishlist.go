@@ -69,3 +69,5 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusCreated)
 }
+
+func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {}

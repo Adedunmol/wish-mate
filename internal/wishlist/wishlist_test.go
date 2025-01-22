@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
@@ -241,12 +242,128 @@ func TestCreateWishlist(t *testing.T) {
 }
 
 func TestGetWishlist(t *testing.T) {
+	user1 := user.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := user.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
 
-	t.Run("return a wishlist", func(t *testing.T) {})
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
+			{ID: 1, Name: "phone", Description: "", Whole: true, Taken: true},
+		}},
+	}}
+	userStore := StubUserStore{users: []user.User{
+		user1,
+		user2,
+	}}
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
-	t.Run("return a 404", func(t *testing.T) {})
+	t.Run("return a wishlist (owner)", func(t *testing.T) {
 
-	t.Run("returns error for no id", func(t *testing.T) {})
+		request := getWishlistRequest(1, 1)
+		response := httptest.NewRecorder()
+
+		server.GetWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlist retrieved successfully",
+			"data": map[string]interface{}{
+				"id":            float64(1),
+				"user_id":       float64(1),
+				"name":          "Birthday list",
+				"description":   "some random description",
+				"notify_before": float64(7),
+				"items": []map[string]interface{}{
+					{"id": float64(1), "name": "phone", "description": "", "whole": true, "taken": true},
+					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a wishlist (others)", func(t *testing.T) {
+		request := getWishlistRequest(2, 1)
+		response := httptest.NewRecorder()
+
+		server.GetWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlist retrieved successfully",
+			"data": map[string]interface{}{
+				"id":          float64(1),
+				"user_id":     float64(1),
+				"name":        "Birthday list",
+				"description": "some random description",
+				"items": []map[string]interface{}{
+					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 404", func(t *testing.T) {
+		request := getWishlistRequest(1, 2)
+		response := httptest.NewRecorder()
+
+		server.GetWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("returns error for no id", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "id", 1)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, "/wishlist", nil)
+		response := httptest.NewRecorder()
+
+		server.GetWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestUpdateWishlist(t *testing.T) {
@@ -289,6 +406,14 @@ func createWishlistRequest(data []byte, email string) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "email", email)
 	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, "/wishlist", bytes.NewReader(data))
+
+	return request
+}
+
+func getWishlistRequest(userID, wishlistID int) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlist/%s", string(wishlistID)), nil)
 
 	return request
 }

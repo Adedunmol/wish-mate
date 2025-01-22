@@ -27,7 +27,7 @@ func GenerateToken(userID int, email string) (string, error) {
 	return tokenString, nil
 }
 
-func DecodeToken(tokenString string) (string, error) {
+func DecodeToken(tokenString string) (map[string]string, error) {
 	var err error
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -37,10 +37,14 @@ func DecodeToken(tokenString string) (string, error) {
 		return []byte(os.Getenv("SECRET_KEY")), nil
 	})
 	if err != nil {
-		return "", fmt.Errorf("error parsing token: %v", err)
+		return nil, fmt.Errorf("error parsing token: %v", err)
 	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims["email"].(string), nil
+		var data map[string]string
+
+		data["email"] = claims["email"].(string)
+		data["id"] = claims["id"].(string)
+		return data, nil
 	}
-	return "", fmt.Errorf("invalid token")
+	return nil, fmt.Errorf("invalid token")
 }
