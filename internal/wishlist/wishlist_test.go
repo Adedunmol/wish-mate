@@ -76,8 +76,9 @@ func TestCreateWishlist(t *testing.T) {
 	t.Run("create and return a wishlist (with items)", func(t *testing.T) {
 
 		data := map[string]interface{}{
-			"name":        "Birthday list",
-			"description": "some random description",
+			"name":          "Birthday list",
+			"description":   "some random description",
+			"notify_before": 7,
 			"items": []map[string]interface{}{
 				{"name": "phone", "description": "", "whole": true},
 				{"name": "bag", "description": "", "whole": true},
@@ -97,10 +98,11 @@ func TestCreateWishlist(t *testing.T) {
 			"status":  "Success",
 			"message": "Wishlist created successfully",
 			"data": map[string]interface{}{
-				"id":          float64(1),
-				"user_id":     float64(1),
-				"name":        "Birthday list",
-				"description": "some random description",
+				"id":            float64(1),
+				"user_id":       float64(1),
+				"name":          "Birthday list",
+				"description":   "some random description",
+				"notify_before": 7,
 				"items": []map[string]interface{}{
 					{"id": float64(1), "name": "phone", "description": "", "whole": true, "taken": false},
 					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
@@ -115,8 +117,9 @@ func TestCreateWishlist(t *testing.T) {
 	t.Run("create and return a wishlist (without items)", func(t *testing.T) {
 
 		data := map[string]interface{}{
-			"name":        "Birthday list",
-			"description": "some random description",
+			"name":          "Birthday list",
+			"description":   "some random description",
+			"notify_before": 7,
 		}
 
 		body, _ := json.Marshal(data)
@@ -132,10 +135,11 @@ func TestCreateWishlist(t *testing.T) {
 			"status":  "Success",
 			"message": "Wishlist created successfully",
 			"data": map[string]interface{}{
-				"id":          float64(1),
-				"user_id":     float64(1),
-				"name":        "Birthday list",
-				"description": "some random description",
+				"id":            float64(1),
+				"user_id":       float64(1),
+				"name":          "Birthday list",
+				"description":   "some random description",
+				"notify_before": 7,
 			},
 		}
 
@@ -146,8 +150,9 @@ func TestCreateWishlist(t *testing.T) {
 	t.Run("return error if no user is found with the email attached", func(t *testing.T) {
 
 		data := map[string]interface{}{
-			"name":        "Birthday list",
-			"description": "some random description",
+			"name":          "Birthday list",
+			"description":   "some random description",
+			"notify_before": 7,
 		}
 
 		body, _ := json.Marshal(data)
@@ -174,7 +179,8 @@ func TestCreateWishlist(t *testing.T) {
 
 	t.Run("returns error for invalid request body", func(t *testing.T) {
 		data := map[string]interface{}{
-			"description": "some random description",
+			"description":   "some random description",
+			"notify_before": 7,
 		}
 
 		body, _ := json.Marshal(data)
