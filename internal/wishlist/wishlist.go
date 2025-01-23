@@ -4,7 +4,9 @@ import (
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/user"
+	"github.com/go-chi/chi/v5"
 	"net/http"
+	"strconv"
 )
 
 type Response struct {
@@ -70,4 +72,41 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusCreated)
 }
 
-func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {
+	id := chi.URLParam(request, "id")
+
+	if id == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	wishlistID, err := strconv.Atoi(id)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	wishlist, err := h.Store.GetWishlistByID(wishlistID, newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrNotFound)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Wishlist retrieved successfully",
+		Data:    wishlist,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}

@@ -32,6 +32,6 @@ type WishlistResponse struct {
 	UserID       int            `json:"user_id"`
 	Name         string         `json:"name"`
 	Description  string         `json:"description"`
-	NotifyBefore int            `json:"notify_before"`
+	NotifyBefore int            `json:"notify_before,omitempty"`
 	Items        []ItemResponse `json:"items,omitempty"`
 }

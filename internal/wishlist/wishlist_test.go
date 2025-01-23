@@ -8,6 +8,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -81,8 +82,40 @@ func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (
 	return wishlistData, nil
 }
 
-func (s *StubWishlistStore) GetWishlistByID(id int, verbose bool) (wishlist.WishlistResponse, error) {
-	return wishlist.WishlistResponse{}, nil
+func (s *StubWishlistStore) GetWishlistByID(wishlistID, userID int) (wishlist.WishlistResponse, error) {
+	var response wishlist.WishlistResponse
+
+	for _, w := range s.wishlists {
+		if w.ID == wishlistID && w.UserID == userID {
+			response = w
+			return response, nil
+		} else if w.ID == wishlistID && w.UserID != userID {
+			response.UserID = w.UserID
+			response.ID = w.ID
+			response.Description = w.Description
+			response.Name = w.Name
+
+			var items []wishlist.ItemResponse
+			for _, i := range w.Items {
+				if !i.Taken {
+					items = append(items, wishlist.ItemResponse{
+						ID:          i.ID,
+						Name:        i.Name,
+						Description: i.Description,
+						Whole:       i.Whole,
+						Taken:       i.Taken,
+					})
+				}
+			}
+
+			response.Items = items
+
+			return response, nil
+		}
+
+	}
+
+	return wishlist.WishlistResponse{}, helpers.ErrNotFound
 }
 
 func (s *StubWishlistStore) UpdateWishlistByID(id int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
@@ -247,8 +280,8 @@ func TestGetWishlist(t *testing.T) {
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
-			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
 			{ID: 1, Name: "phone", Description: "", Whole: true, Taken: true},
+			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
 		}},
 	}}
 	userStore := StubUserStore{users: []user.User{
@@ -259,7 +292,7 @@ func TestGetWishlist(t *testing.T) {
 
 	t.Run("return a wishlist (owner)", func(t *testing.T) {
 
-		request := getWishlistRequest(1, 1)
+		request := getWishlistRequest(user1.ID, 1)
 		response := httptest.NewRecorder()
 
 		server.GetWishlist(response, request)
@@ -293,7 +326,7 @@ func TestGetWishlist(t *testing.T) {
 	})
 
 	t.Run("return a wishlist (others)", func(t *testing.T) {
-		request := getWishlistRequest(2, 1)
+		request := getWishlistRequest(user2.ID, 1)
 		response := httptest.NewRecorder()
 
 		server.GetWishlist(response, request)
@@ -333,7 +366,9 @@ func TestGetWishlist(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		wantBody := map[string]interface{}{}
+		wantBody := map[string]interface{}{
+			"message": "resource not found",
+		}
 
 		wantJSON, _ := json.Marshal(wantBody)
 
@@ -354,7 +389,9 @@ func TestGetWishlist(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		wantBody := map[string]interface{}{}
+		wantBody := map[string]interface{}{
+			"message": "id is required",
+		}
 
 		wantJSON, _ := json.Marshal(wantBody)
 
@@ -412,8 +449,13 @@ func createWishlistRequest(data []byte, email string) *http.Request {
 
 func getWishlistRequest(userID, wishlistID int) *http.Request {
 
-	ctx := context.WithValue(context.Background(), "id", userID)
+	ctx := context.WithValue(context.Background(), "user_id", userID)
 	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlist/%s", fmt.Sprint(wishlistID)), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", fmt.Sprint(wishlistID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
 	return request
 }
