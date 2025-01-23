@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrUnprocessable       = NewHTTPError(nil, http.StatusUnprocessableEntity, "unable to process request", nil)
+	ErrForbidden           = NewHTTPError(nil, http.StatusForbidden, "forbidden from accessing the resource", nil)
 	ErrDecode              = NewHTTPError(nil, http.StatusInternalServerError, "error decoding json body", nil)
 	ErrBadRequest          = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
 	ErrUnauthorized        = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
