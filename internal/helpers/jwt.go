@@ -15,7 +15,7 @@ func GenerateToken(userID int, email string) (string, error) {
 	claims := token.Claims.(jwt.MapClaims)
 
 	claims["email"] = email
-	claims["id"] = userID
+	claims["user_id"] = userID
 	claims["exp"] = time.Now().Add(TokenExpiration).Unix()
 
 	tokenString, err := token.SignedString(signingKey)
@@ -43,7 +43,7 @@ func DecodeToken(tokenString string) (map[string]string, error) {
 		var data map[string]string
 
 		data["email"] = claims["email"].(string)
-		data["id"] = claims["id"].(string)
+		data["user_id"] = claims["user_id"].(string)
 		return data, nil
 	}
 	return nil, fmt.Errorf("invalid token")
