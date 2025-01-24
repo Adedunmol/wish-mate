@@ -169,3 +169,5 @@ func (h *Handler) UpdateWishlist(responseWriter http.ResponseWriter, request *ht
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *http.Request) {}
