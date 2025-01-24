@@ -54,10 +54,11 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 	return nil
 }
 
-func (qc *Client) Init(ctx context.Context) error {
+func NewClient(ctx context.Context) (*Client, error) {
+	var qc Client
 	addr, err := redis.ParseURL(os.Getenv("REDIS_URL"))
 	if err != nil {
-		return fmt.Errorf("error parsing redis url: %v", err)
+		return &qc, fmt.Errorf("error parsing redis url: %v", err)
 	}
 
 	qc.once.Do(func() {
@@ -66,7 +67,7 @@ func (qc *Client) Init(ctx context.Context) error {
 		qc.client = asynq.NewClient(asynq.RedisClientOpt{Addr: addr.Addr, Password: "", DB: 0})
 	})
 
-	return nil
+	return &qc, nil
 }
 
 func (qc *Client) GetClient() *asynq.Client {
