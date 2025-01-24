@@ -14,7 +14,7 @@ func UserRoutes(config config.Config) {
 
 	handler := Handler{Store: store}
 
-	userRouter.Patch("/register", http.HandlerFunc(handler.CreateUserHandler))
+	userRouter.Post("/register", http.HandlerFunc(handler.CreateUserHandler))
 	userRouter.Post("/login", http.HandlerFunc(handler.LoginUserHandler))
 
 	config.Router.Mount("/users", userRouter)
