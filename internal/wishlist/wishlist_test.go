@@ -9,6 +9,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -118,8 +119,38 @@ func (s *StubWishlistStore) GetWishlistByID(wishlistID, userID int) (wishlist.Wi
 	return wishlist.WishlistResponse{}, helpers.ErrNotFound
 }
 
-func (s *StubWishlistStore) UpdateWishlistByID(id int, body wishlist.Wishlist) (wishlist.WishlistResponse, error) {
-	return wishlist.WishlistResponse{}, nil
+func (s *StubWishlistStore) UpdateWishlistByID(wishlistID, userID int, body wishlist.UpdateWishlist) (wishlist.WishlistResponse, error) {
+	var response wishlist.WishlistResponse
+
+	for _, w := range s.wishlists {
+		log.Printf("wishlistID: %d", wishlistID)
+		log.Printf("UserID: %d", userID)
+		log.Printf("current wishlistID: %d", w.ID)
+		log.Printf("wishlist userID: %d", w.UserID)
+
+		if w.ID == wishlistID && w.UserID != userID {
+			return response, helpers.ErrForbidden
+		}
+
+		if w.ID == wishlistID && w.UserID == userID {
+
+			if body.Name != "" {
+				response.Name = body.Name
+			} else {
+				response.Name = w.Name
+			}
+
+			if body.Description != "" {
+				response.Description = body.Description
+			} else {
+				response.Description = w.Description
+			}
+
+			return response, nil
+		}
+	}
+
+	return wishlist.WishlistResponse{}, helpers.ErrNotFound
 }
 
 func (s *StubWishlistStore) DeleteWishlistByID(id int) error {
@@ -420,7 +451,9 @@ func TestUpdateWishlist(t *testing.T) {
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 	t.Run("update and return a wishlist", func(t *testing.T) {
-		request := updateWishlistRequest(user2.ID, 1, nil)
+		data := []byte(`{ "name": "Birthday list 2" }`)
+
+		request := updateWishlistRequest(user1.ID, 1, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlist(response, request)
@@ -430,15 +463,10 @@ func TestUpdateWishlist(t *testing.T) {
 
 		wantBody := map[string]interface{}{
 			"status":  "Success",
-			"message": "Wishlist retrieved successfully",
+			"message": "Wishlist updated successfully",
 			"data": map[string]interface{}{
-				"id":          float64(1),
-				"user_id":     float64(1),
-				"name":        "Birthday list",
+				"name":        "Birthday list 2",
 				"description": "some random description",
-				"items": []map[string]interface{}{
-					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
-				},
 			},
 		}
 
@@ -452,7 +480,9 @@ func TestUpdateWishlist(t *testing.T) {
 	})
 
 	t.Run("return a 404", func(t *testing.T) {
-		request := updateWishlistRequest(user2.ID, 1, nil)
+		data := []byte(`{}`)
+
+		request := updateWishlistRequest(user1.ID, 2, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlist(response, request)
@@ -474,7 +504,8 @@ func TestUpdateWishlist(t *testing.T) {
 	})
 
 	t.Run("return a 403 if updating another user's resource", func(t *testing.T) {
-		request := updateWishlistRequest(user2.ID, 1, nil)
+		data := []byte(`{}`)
+		request := updateWishlistRequest(user2.ID, 1, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlist(response, request)
@@ -497,7 +528,7 @@ func TestUpdateWishlist(t *testing.T) {
 
 	t.Run("returns error for no id", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), "id", 1)
-		request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, "/wishlist", nil)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, "/wishlist/", nil)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlist(response, request)

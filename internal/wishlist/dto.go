@@ -28,10 +28,16 @@ type ItemResponse struct {
 }
 
 type WishlistResponse struct {
-	ID           int            `json:"id"`
-	UserID       int            `json:"user_id"`
+	ID           int            `json:"id,omitempty"`
+	UserID       int            `json:"user_id,omitempty"`
 	Name         string         `json:"name"`
 	Description  string         `json:"description"`
 	NotifyBefore int            `json:"notify_before,omitempty"`
 	Items        []ItemResponse `json:"items,omitempty"`
+}
+
+type UpdateWishlist struct {
+	helpers.Validation
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }

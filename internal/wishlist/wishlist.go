@@ -110,3 +110,57 @@ func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) UpdateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
+	id := chi.URLParam(request, "id")
+
+	if id == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	body, problems, err := helpers.DecodeAndValidate[*UpdateWishlist](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	wishlistID, err := strconv.Atoi(id)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	wishlist, err := h.Store.UpdateWishlistByID(wishlistID, newUserID, *body)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Wishlist updated successfully",
+		Data:    wishlist,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
