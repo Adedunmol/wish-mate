@@ -9,7 +9,6 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"github.com/go-chi/chi/v5"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -123,10 +122,6 @@ func (s *StubWishlistStore) UpdateWishlistByID(wishlistID, userID int, body wish
 	var response wishlist.WishlistResponse
 
 	for _, w := range s.wishlists {
-		log.Printf("wishlistID: %d", wishlistID)
-		log.Printf("UserID: %d", userID)
-		log.Printf("current wishlistID: %d", w.ID)
-		log.Printf("wishlist userID: %d", w.UserID)
 
 		if w.ID == wishlistID && w.UserID != userID {
 			return response, helpers.ErrForbidden
@@ -153,8 +148,20 @@ func (s *StubWishlistStore) UpdateWishlistByID(wishlistID, userID int, body wish
 	return wishlist.WishlistResponse{}, helpers.ErrNotFound
 }
 
-func (s *StubWishlistStore) DeleteWishlistByID(id int) error {
-	return nil
+func (s *StubWishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
+
+	for _, w := range s.wishlists {
+
+		if w.ID == wishlistID && w.UserID != userID {
+			return helpers.ErrForbidden
+		}
+
+		if w.ID == wishlistID && w.UserID == userID {
+			return nil
+		}
+	}
+
+	return helpers.ErrNotFound
 }
 
 func TestCreateWishlist(t *testing.T) {
@@ -578,11 +585,7 @@ func TestDeleteWishlist(t *testing.T) {
 
 		wantBody := map[string]interface{}{
 			"status":  "Success",
-			"message": "Wishlist updated successfully",
-			"data": map[string]interface{}{
-				"name":        "Birthday list 2",
-				"description": "some random description",
-			},
+			"message": "Wishlist deleted successfully",
 		}
 
 		wantJSON, _ := json.Marshal(wantBody)

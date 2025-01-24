@@ -170,4 +170,45 @@ func (h *Handler) UpdateWishlist(responseWriter http.ResponseWriter, request *ht
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *http.Request) {
+	id := chi.URLParam(request, "id")
+
+	if id == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	wishlistID, err := strconv.Atoi(id)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	err = h.Store.DeleteWishlistByID(wishlistID, newUserID)
+
+	if err != nil && errors.Is(err, helpers.ErrForbidden) {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	if err != nil && errors.Is(err, helpers.ErrNotFound) {
+		helpers.HandleError(responseWriter, helpers.ErrNotFound)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Wishlist deleted successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
