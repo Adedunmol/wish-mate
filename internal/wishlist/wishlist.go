@@ -151,8 +151,13 @@ func (h *Handler) UpdateWishlist(responseWriter http.ResponseWriter, request *ht
 
 	wishlist, err := h.Store.UpdateWishlistByID(wishlistID, newUserID, *body)
 
-	if err != nil {
+	if err != nil && errors.Is(err, helpers.ErrForbidden) {
 		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	if err != nil && errors.Is(err, helpers.ErrNotFound) {
+		helpers.HandleError(responseWriter, helpers.ErrNotFound)
 		return
 	}
 
