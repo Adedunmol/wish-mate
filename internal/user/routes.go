@@ -13,7 +13,7 @@ func UserRoutes(config config.Config) {
 	handler := Handler{}
 
 	userRouter.Post("/{user_id}/friend_requests", http.HandlerFunc(handler.SendRequestHandler))
-	userRouter.Patch("/{user_id}/friend_requests", http.HandlerFunc(handler.AcceptRequestHandler))
+	userRouter.Patch("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.AcceptRequestHandler))
 
 	config.Router.Mount("/users", userRouter)
 }

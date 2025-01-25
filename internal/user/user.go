@@ -1,8 +1,16 @@
 package user
 
-import "net/http"
+import (
+	"github.com/Adedunmol/wish-mate/internal/auth"
+	"github.com/Adedunmol/wish-mate/internal/queue"
+	"net/http"
+)
 
-type Handler struct{}
+type Handler struct {
+	AuthStore   auth.Store
+	FriendStore FriendStore
+	Queue       queue.Queue
+}
 
 func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
