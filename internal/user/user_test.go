@@ -8,6 +8,8 @@ func TestSendRequest(t *testing.T) {
 
 	t.Run("return 404 for no auth with the id", func(t *testing.T) {})
 
+	t.Run("return 409 if friendship exists already", func(t *testing.T) {})
+
 	t.Run("return bad request for empty auth id", func(t *testing.T) {})
 }
 
