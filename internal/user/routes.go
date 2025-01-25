@@ -10,12 +10,10 @@ func UserRoutes(config config.Config) {
 
 	userRouter := chi.NewRouter()
 
-	store := NewUserStore(config.DB)
+	handler := Handler{}
 
-	handler := Handler{Store: store}
-
-	userRouter.Post("/register", http.HandlerFunc(handler.CreateUserHandler))
-	userRouter.Post("/login", http.HandlerFunc(handler.LoginUserHandler))
+	userRouter.Post("/{user_id}/friend_requests", http.HandlerFunc(handler.SendRequestHandler))
+	userRouter.Patch("/{user_id}/friend_requests", http.HandlerFunc(handler.AcceptRequestHandler))
 
 	config.Router.Mount("/users", userRouter)
 }

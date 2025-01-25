@@ -2,8 +2,8 @@ package wishlist
 
 import (
 	"errors"
+	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
-	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -17,7 +17,7 @@ type Response struct {
 
 type Handler struct {
 	Store     Store
-	UserStore user.Store
+	UserStore auth.Store
 }
 
 func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {

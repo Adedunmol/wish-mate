@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
-	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -16,32 +16,32 @@ import (
 )
 
 type StubUserStore struct {
-	users []user.User
+	users []auth.User
 }
 
-func (s *StubUserStore) CreateUser(body *user.CreateUserBody) (user.CreateUserResponse, error) {
+func (s *StubUserStore) CreateUser(body *auth.CreateUserBody) (auth.CreateUserResponse, error) {
 
 	for _, u := range s.users {
 		if u.Email == body.Email {
-			return user.CreateUserResponse{}, helpers.ErrConflict
+			return auth.CreateUserResponse{}, helpers.ErrConflict
 		}
 	}
 
-	userData := user.User{ID: 1, FirstName: body.FirstName, LastName: body.LastName, Username: body.Username, Email: body.Email, Password: body.Password}
+	userData := auth.User{ID: 1, FirstName: body.FirstName, LastName: body.LastName, Username: body.Username, Email: body.Email, Password: body.Password}
 
 	s.users = append(s.users, userData)
 
-	return user.CreateUserResponse{ID: userData.ID, FirstName: userData.FirstName, LastName: userData.LastName, Username: userData.Username}, nil
+	return auth.CreateUserResponse{ID: userData.ID, FirstName: userData.FirstName, LastName: userData.LastName, Username: userData.Username}, nil
 }
 
-func (s *StubUserStore) FindUserByEmail(email string) (user.User, error) {
+func (s *StubUserStore) FindUserByEmail(email string) (auth.User, error) {
 
 	for _, u := range s.users {
 		if u.Email == email {
 			return u, nil
 		}
 	}
-	return user.User{}, helpers.ErrNotFound
+	return auth.User{}, helpers.ErrNotFound
 }
 
 func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
@@ -166,7 +166,7 @@ func (s *StubWishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 
 func TestCreateWishlist(t *testing.T) {
 	store := StubWishlistStore{wishlists: make([]wishlist.WishlistResponse, 0)}
-	userStore := StubUserStore{users: []user.User{
+	userStore := StubUserStore{users: []auth.User{
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 	}}
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
@@ -250,7 +250,7 @@ func TestCreateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return error if no user is found with the email attached", func(t *testing.T) {
+	t.Run("return error if no auth is found with the email attached", func(t *testing.T) {
 
 		data := map[string]interface{}{
 			"name":          "Birthday list",
@@ -313,8 +313,8 @@ func TestCreateWishlist(t *testing.T) {
 }
 
 func TestGetWishlist(t *testing.T) {
-	user1 := user.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
-	user2 := user.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
@@ -322,7 +322,7 @@ func TestGetWishlist(t *testing.T) {
 			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
 		}},
 	}}
-	userStore := StubUserStore{users: []user.User{
+	userStore := StubUserStore{users: []auth.User{
 		user1,
 		user2,
 	}}
@@ -442,8 +442,8 @@ func TestGetWishlist(t *testing.T) {
 }
 
 func TestUpdateWishlist(t *testing.T) {
-	user1 := user.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
-	user2 := user.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
@@ -451,7 +451,7 @@ func TestUpdateWishlist(t *testing.T) {
 			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
 		}},
 	}}
-	userStore := StubUserStore{users: []user.User{
+	userStore := StubUserStore{users: []auth.User{
 		user1,
 		user2,
 	}}
@@ -510,7 +510,7 @@ func TestUpdateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return a 403 if updating another user's resource", func(t *testing.T) {
+	t.Run("return a 403 if updating another auth's resource", func(t *testing.T) {
 		data := []byte(`{}`)
 		request := updateWishlistRequest(user2.ID, 1, data)
 		response := httptest.NewRecorder()
@@ -558,8 +558,8 @@ func TestUpdateWishlist(t *testing.T) {
 }
 
 func TestDeleteWishlist(t *testing.T) {
-	user1 := user.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
-	user2 := user.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
@@ -567,7 +567,7 @@ func TestDeleteWishlist(t *testing.T) {
 			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
 		}},
 	}}
-	userStore := StubUserStore{users: []user.User{
+	userStore := StubUserStore{users: []auth.User{
 		user1,
 		user2,
 	}}
@@ -619,7 +619,7 @@ func TestDeleteWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return a 403 if updating another user's resource", func(t *testing.T) {
+	t.Run("return a 403 if updating another auth's resource", func(t *testing.T) {
 		request := deleteWishlistRequest(user2.ID, 1)
 		response := httptest.NewRecorder()
 
