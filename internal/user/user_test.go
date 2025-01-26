@@ -176,7 +176,7 @@ func TestSendRequest(t *testing.T) {
 	})
 }
 
-func TestAcceptRequest(t *testing.T) {
+func TestAcceptAndBlockRequest(t *testing.T) {
 	authStore := StubUserStore{users: []auth.User{
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
@@ -189,8 +189,9 @@ func TestAcceptRequest(t *testing.T) {
 	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 	t.Run("accept a request and return the entry", func(t *testing.T) {
+		data := []byte(`{ "type": "accept" }`)
 
-		request := createAcceptRequest(1, 1)
+		request := createUpdateRequest(1, 1, data)
 		response := httptest.NewRecorder()
 
 		server.AcceptRequestHandler(response, request)
@@ -214,8 +215,49 @@ func TestAcceptRequest(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
+	t.Run("block a friendship and return the entry", func(t *testing.T) {
+		authStore := StubUserStore{users: []auth.User{
+			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
+		}}
+		friendStore := StubFriendStore{friends: []user.Friend{
+			{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
+			{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
+		}}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+
+		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+
+		data := []byte(`{ "type": "block" }`)
+
+		request := createUpdateRequest(1, 1, data)
+		response := httptest.NewRecorder()
+
+		server.AcceptRequestHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Friendship blocked successfully",
+			"data": map[string]interface{}{
+				"id":           float64(1),
+				"user_id":      float64(1),
+				"friend_id":    float64(2),
+				"status":       "blocked",
+				"friend_since": time.Now(),
+			},
+		}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
 	t.Run("return 404 for no entry with the request id", func(t *testing.T) {
-		request := createAcceptRequest(1, 4)
+		data := []byte(`{ "type": "accept" }`)
+
+		request := createUpdateRequest(1, 4, data)
 		response := httptest.NewRecorder()
 
 		server.AcceptRequestHandler(response, request)
@@ -228,6 +270,43 @@ func TestAcceptRequest(t *testing.T) {
 		}
 
 		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+	t.Run("return 404 for no entry with the request id", func(t *testing.T) {
+		data := []byte(`{ "type": "accept" }`)
+
+		request := createUpdateRequest(1, 4, data)
+		response := httptest.NewRecorder()
+
+		server.AcceptRequestHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 400 for invalid request body", func(t *testing.T) {
+		data := []byte(`{}`)
+
+		request := createUpdateRequest(1, 4, data)
+		response := httptest.NewRecorder()
+
+		server.AcceptRequestHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "invalid request body",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 
@@ -270,17 +349,6 @@ func TestGetFriendship(t *testing.T) {
 	t.Run("return a friendship", func(t *testing.T) {})
 }
 
-func TestUpdateFriendship(t *testing.T) {
-
-	t.Run("update and return a friendship", func(t *testing.T) {})
-
-	t.Run("return forbidden", func(t *testing.T) {})
-
-	t.Run("invalid request body", func(t *testing.T) {})
-
-	t.Run("return not found for friendship id not found", func(t *testing.T) {})
-}
-
 func createSendRequest(userID int, data []byte) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
@@ -293,10 +361,10 @@ func createSendRequest(userID int, data []byte) *http.Request {
 
 	return request
 }
-func createAcceptRequest(userID, requestID int) *http.Request {
+func createUpdateRequest(userID, requestID int, data []byte) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
-	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, requestID), nil)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, requestID), bytes.NewReader(data))
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
