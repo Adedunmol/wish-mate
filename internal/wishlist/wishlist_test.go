@@ -178,8 +178,8 @@ func TestCreateWishlist(t *testing.T) {
 			"description":   "some random description",
 			"notify_before": 7,
 			"items": []map[string]interface{}{
-				{"name": "phone", "description": "", "whole": true},
-				{"name": "bag", "description": "", "whole": true},
+				{"name": "phone", "description": ""},
+				{"name": "bag", "description": ""},
 			},
 		}
 
@@ -202,8 +202,8 @@ func TestCreateWishlist(t *testing.T) {
 				"description":   "some random description",
 				"notify_before": float64(7),
 				"items": []map[string]interface{}{
-					{"id": float64(1), "name": "phone", "description": "", "whole": true, "taken": false},
-					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
+					{"id": float64(1), "name": "phone", "description": "", "taken": false},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false},
 				},
 			},
 		}
@@ -250,7 +250,7 @@ func TestCreateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return error if no auth is found with the email attached", func(t *testing.T) {
+	t.Run("return error if no user is found with the email attached", func(t *testing.T) {
 
 		data := map[string]interface{}{
 			"name":          "Birthday list",
@@ -318,8 +318,8 @@ func TestGetWishlist(t *testing.T) {
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
-			{ID: 1, Name: "phone", Description: "", Whole: true, Taken: true},
-			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
 		}},
 	}}
 	userStore := StubUserStore{users: []auth.User{
@@ -348,8 +348,8 @@ func TestGetWishlist(t *testing.T) {
 				"description":   "some random description",
 				"notify_before": float64(7),
 				"items": []map[string]interface{}{
-					{"id": float64(1), "name": "phone", "description": "", "whole": true, "taken": true},
-					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
+					{"id": float64(1), "name": "phone", "description": "", "taken": true},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false},
 				},
 			},
 		}
@@ -381,7 +381,7 @@ func TestGetWishlist(t *testing.T) {
 				"name":        "Birthday list",
 				"description": "some random description",
 				"items": []map[string]interface{}{
-					{"id": float64(2), "name": "bag", "description": "", "whole": true, "taken": false},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false},
 				},
 			},
 		}
@@ -447,8 +447,8 @@ func TestUpdateWishlist(t *testing.T) {
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
-			{ID: 1, Name: "phone", Description: "", Whole: true, Taken: true},
-			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
 		}},
 	}}
 	userStore := StubUserStore{users: []auth.User{
@@ -563,8 +563,8 @@ func TestDeleteWishlist(t *testing.T) {
 
 	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
 		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
-			{ID: 1, Name: "phone", Description: "", Whole: true, Taken: true},
-			{ID: 2, Name: "bag", Description: "", Whole: true, Taken: false},
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
 		}},
 	}}
 	userStore := StubUserStore{users: []auth.User{

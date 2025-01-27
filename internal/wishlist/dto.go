@@ -8,7 +8,6 @@ type Item struct {
 	helpers.Validation
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description" validate:"required"`
-	Whole       bool   `json:"whole" validate:"required"`
 }
 
 type Wishlist struct {
@@ -24,7 +23,6 @@ type ItemResponse struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Taken       bool   `json:"taken"`
-	Whole       bool   `json:"whole"`
 }
 
 type WishlistResponse struct {
