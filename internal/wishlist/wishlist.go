@@ -63,6 +63,8 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	// create a schedule using the calculated days before the birthday
+
 	response := Response{
 		Status:  "Success",
 		Message: "Wishlist created successfully",
