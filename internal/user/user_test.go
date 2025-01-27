@@ -14,7 +14,6 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
 )
 
 type StubQueue struct {
@@ -60,11 +59,58 @@ func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword strin
 }
 
 type StubFriendStore struct {
-	friends []user.Friend
+	friends []user.FriendshipResponse
 }
 
-func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (interface{}, error) {
-	return nil, nil
+func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (user.FriendshipResponse, error) {
+
+	data := user.FriendshipResponse{
+		ID:       1,
+		UserID:   userID,
+		FriendID: recipientID,
+		Status:   "pending",
+	}
+
+	s.friends = append(s.friends, data)
+
+	return data, nil
+}
+
+func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (user.FriendshipResponse, error) {
+
+	for i, u := range s.friends {
+		if u.ID == friendshipID {
+			s.friends[i].Status = status
+			return s.friends[i], nil
+		}
+	}
+	return user.FriendshipResponse{}, helpers.ErrNotFound
+}
+
+type NotFoundFriendStore struct {
+	friends []user.FriendshipResponse
+}
+
+func (s *NotFoundFriendStore) CreateFriendship(_, _ int) (user.FriendshipResponse, error) {
+
+	return user.FriendshipResponse{}, helpers.ErrNotFound
+}
+
+func (s *NotFoundFriendStore) UpdateFriendship(_ int, _ string) (user.FriendshipResponse, error) {
+	return user.FriendshipResponse{}, helpers.ErrNotFound
+}
+
+type ConflictFriendStore struct {
+	friends []user.FriendshipResponse
+}
+
+func (s *ConflictFriendStore) CreateFriendship(_, _ int) (user.FriendshipResponse, error) {
+
+	return user.FriendshipResponse{}, helpers.ErrConflict
+}
+
+func (s *ConflictFriendStore) UpdateFriendship(_ int, _ string) (user.FriendshipResponse, error) {
+	return user.FriendshipResponse{}, helpers.ErrConflict
 }
 
 func TestSendRequest(t *testing.T) {
@@ -72,7 +118,7 @@ func TestSendRequest(t *testing.T) {
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 	}}
-	friendStore := StubFriendStore{friends: []user.Friend{}}
+	friendStore := StubFriendStore{friends: make([]user.FriendshipResponse, 0)}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
 	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
@@ -93,11 +139,10 @@ func TestSendRequest(t *testing.T) {
 			"status":  "Success",
 			"message": "Friendship created successfully",
 			"data": map[string]interface{}{
-				"id":           float64(1),
-				"user_id":      float64(2),
-				"friend_id":    float64(1),
-				"status":       "pending",
-				"friend_since": time.Now(),
+				"id":        float64(1),
+				"user_id":   float64(2),
+				"friend_id": float64(1),
+				"status":    "pending",
 			},
 		}
 
@@ -106,7 +151,14 @@ func TestSendRequest(t *testing.T) {
 	})
 
 	t.Run("return 404 for no user with the id", func(t *testing.T) {
+		authStore := StubUserStore{users: []auth.User{
+			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
+		}}
+		friendStore := NotFoundFriendStore{friends: make([]user.FriendshipResponse, 0)}
+		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
+		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 		data := []byte(fmt.Sprintf(`{ "recipient_id": %d }`, 3))
 
 		request := createSendRequest(1, data)
@@ -118,7 +170,7 @@ func TestSendRequest(t *testing.T) {
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"message": "no resource found",
+			"message": "resource not found",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusNotFound)
@@ -126,14 +178,12 @@ func TestSendRequest(t *testing.T) {
 	})
 
 	t.Run("return 409 if friendship exists already", func(t *testing.T) {
+
 		authStore := StubUserStore{users: []auth.User{
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
-		friendStore := StubFriendStore{friends: []user.Friend{
-			{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
-			{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
-		}}
+		friendStore := ConflictFriendStore{friends: make([]user.FriendshipResponse, 0)}
 		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
 		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
@@ -167,21 +217,29 @@ func TestSendRequest(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
+		wantBody := map[string]interface{}{
 			"message": "invalid request body",
+			"problems": map[string][]string{
+				"RecipientID": []string{"RecipientID required"},
+			},
 		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
 
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 }
 
-func TestAcceptAndBlockRequest(t *testing.T) {
+func TestUpdateRequest(t *testing.T) {
 	authStore := StubUserStore{users: []auth.User{
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 	}}
-	friendStore := StubFriendStore{friends: []user.Friend{
+	friendStore := StubFriendStore{friends: []user.FriendshipResponse{
 		{ID: 1, UserID: 1, FriendID: 2, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
@@ -194,20 +252,19 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		request := createUpdateRequest(1, 1, data)
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"status":  "Success",
-			"message": "Friendship accepted successfully",
+			"message": "Friendship updated successfully",
 			"data": map[string]interface{}{
-				"id":           float64(1),
-				"user_id":      float64(1),
-				"friend_id":    float64(2),
-				"status":       "accepted",
-				"friend_since": time.Now(),
+				"id":        float64(1),
+				"user_id":   float64(1),
+				"friend_id": float64(2),
+				"status":    "accepted",
 			},
 		}
 
@@ -220,7 +277,7 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
-		friendStore := StubFriendStore{friends: []user.Friend{
+		friendStore := StubFriendStore{friends: []user.FriendshipResponse{
 			{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
 			{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
 		}}
@@ -233,20 +290,19 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		request := createUpdateRequest(1, 1, data)
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
 			"status":  "Success",
-			"message": "Friendship blocked successfully",
+			"message": "Friendship updated successfully",
 			"data": map[string]interface{}{
-				"id":           float64(1),
-				"user_id":      float64(1),
-				"friend_id":    float64(2),
-				"status":       "blocked",
-				"friend_since": time.Now(),
+				"id":        float64(1),
+				"user_id":   float64(1),
+				"friend_id": float64(2),
+				"status":    "blocked",
 			},
 		}
 
@@ -260,7 +316,7 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		request := createUpdateRequest(1, 4, data)
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
@@ -272,13 +328,14 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		assertResponseCode(t, response.Code, http.StatusNotFound)
 		assertResponseBody(t, got, want)
 	})
+
 	t.Run("return 404 for no entry with the request id", func(t *testing.T) {
 		data := []byte(`{ "type": "accept" }`)
 
 		request := createUpdateRequest(1, 4, data)
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
@@ -297,23 +354,31 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		request := createUpdateRequest(1, 4, data)
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{
+		wantBody := map[string]interface{}{
 			"message": "invalid request body",
+			"problems": map[string][]string{
+				"Type": []string{"Type required"},
+			},
 		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
 
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return bad request for empty request id", func(t *testing.T) {
+	t.Run("return 400 for empty request id", func(t *testing.T) {
 
 		ctx := context.WithValue(context.Background(), "user_id", 1)
-		request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/", 1), nil)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/", 1), bytes.NewReader([]byte(`{ "type": "accept" }`)))
 
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("user_id", fmt.Sprint(1))
@@ -321,13 +386,13 @@ func TestAcceptAndBlockRequest(t *testing.T) {
 		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 		response := httptest.NewRecorder()
 
-		server.AcceptRequestHandler(response, request)
+		server.UpdateRequestHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"message": "invalid request body",
+			"message": "request id is required",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
@@ -361,6 +426,7 @@ func createSendRequest(userID int, data []byte) *http.Request {
 
 	return request
 }
+
 func createUpdateRequest(userID, requestID int, data []byte) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
@@ -374,6 +440,7 @@ func createUpdateRequest(userID, requestID int, data []byte) *http.Request {
 
 	return request
 }
+
 func assertResponseCode(t *testing.T, got, want int) {
 	t.Helper()
 	if got != want {

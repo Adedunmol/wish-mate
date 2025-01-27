@@ -61,7 +61,6 @@ func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (
 			ID:          id,
 			Name:        item.Name,
 			Description: item.Description,
-			Whole:       item.Whole,
 			Taken:       false,
 		})
 
@@ -102,7 +101,6 @@ func (s *StubWishlistStore) GetWishlistByID(wishlistID, userID int) (wishlist.Wi
 						ID:          i.ID,
 						Name:        i.Name,
 						Description: i.Description,
-						Whole:       i.Whole,
 						Taken:       i.Taken,
 					})
 				}
