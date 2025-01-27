@@ -398,6 +398,25 @@ func TestUpdateRequest(t *testing.T) {
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
+
+	t.Run("return 400 for invalid type", func(t *testing.T) {
+		data := []byte(`{ "type": "random" }`)
+
+		request := createUpdateRequest(1, 1, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateRequestHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "invalid type",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestGetAllFriendships(t *testing.T) {
