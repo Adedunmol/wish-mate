@@ -560,6 +560,57 @@ func TestGetAllFriendships(t *testing.T) {
 		assertResponseCode(t, response.Code, http.StatusOK)
 		assertResponseBody(t, got, want)
 	})
+
+	t.Run("return 400 for invalid status", func(t *testing.T) {
+		request := getAllRequests(1, 1, "random")
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "invalid status",
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 403 for accessing another user's requests", func(t *testing.T) {
+
+		ctx := context.WithValue(context.Background(), "user_id", 1)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests?status=%s", 2, "accepted"), nil)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("user_id", fmt.Sprint(2))
+
+		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "forbidden from accessing the resource",
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusForbidden)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestGetFriendship(t *testing.T) {
