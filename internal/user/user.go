@@ -171,7 +171,7 @@ func (h *Handler) GetAllRequestsHandler(responseWriter http.ResponseWriter, requ
 
 	response := Response{
 		Status:  "Success",
-		Message: "Friendship retrieved successfully",
+		Message: "Friendships retrieved successfully",
 		Data:    data,
 	}
 
