@@ -125,3 +125,55 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) GetAllRequestsHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	userID := chi.URLParam(request, "user_id")
+
+	if userID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("user id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	newUserID, err := strconv.Atoi(userID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	currentUserID := request.Context().Value("user_id").(int)
+
+	if currentUserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	status := request.URL.Query().Get("status")
+
+	var data []FriendshipResponse
+
+	switch status {
+	case "accepted", "blocked", "pending":
+		data, err = h.FriendStore.GetAllFriendships(newUserID, status)
+		break
+	case "":
+		status = "all"
+		data, err = h.FriendStore.GetAllFriendships(newUserID, status)
+		break
+	default:
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(nil, http.StatusBadRequest, "invalid status", nil))
+		return
+	}
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Friendship retrieved successfully",
+		Data:    data,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}

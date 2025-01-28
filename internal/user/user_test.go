@@ -10,6 +10,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -87,6 +88,19 @@ func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (use
 	return user.FriendshipResponse{}, helpers.ErrNotFound
 }
 
+func (s *StubFriendStore) GetAllFriendships(userID int, status string) ([]user.FriendshipResponse, error) {
+	result := make([]user.FriendshipResponse, 0)
+
+	log.Printf("status: %s", status)
+
+	for _, u := range s.friends {
+		if u.UserID == userID && (u.Status == status || u.Status == "all") {
+			result = append(result, u)
+		}
+	}
+	return result, nil
+}
+
 type NotFoundFriendStore struct {
 	friends []user.FriendshipResponse
 }
@@ -100,6 +114,10 @@ func (s *NotFoundFriendStore) UpdateFriendship(_ int, _ string) (user.Friendship
 	return user.FriendshipResponse{}, helpers.ErrNotFound
 }
 
+func (s *NotFoundFriendStore) GetAllFriendships(_ int, _ string) ([]user.FriendshipResponse, error) {
+	return nil, nil
+}
+
 type ConflictFriendStore struct {
 	friends []user.FriendshipResponse
 }
@@ -111,6 +129,10 @@ func (s *ConflictFriendStore) CreateFriendship(_, _ int) (user.FriendshipRespons
 
 func (s *ConflictFriendStore) UpdateFriendship(_ int, _ string) (user.FriendshipResponse, error) {
 	return user.FriendshipResponse{}, helpers.ErrConflict
+}
+
+func (s *ConflictFriendStore) GetAllFriendships(_ int, _ string) ([]user.FriendshipResponse, error) {
+	return nil, nil
 }
 
 func TestSendRequest(t *testing.T) {
@@ -420,12 +442,124 @@ func TestUpdateRequest(t *testing.T) {
 }
 
 func TestGetAllFriendships(t *testing.T) {
+	authStore := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
+		{ID: 3, FirstName: "Ayo", LastName: "Wale", Password: "password", Email: "ayo@gmail.com", Username: "Ayo"},
+	}}
 
-	t.Run("return all friendships (pending)", func(t *testing.T) {})
+	friendStore := StubFriendStore{friends: []user.FriendshipResponse{
+		{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
+		{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
+		{ID: 3, UserID: 1, FriendID: 3, Status: "pending"},
+	}}
+	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-	t.Run("return all friendships (accepted)", func(t *testing.T) {})
+	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
-	t.Run("return all friendships (blocked)", func(t *testing.T) {})
+	t.Run("return all friendships", func(t *testing.T) {
+
+		request := getAllRequests(1, 1, "")
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Friendships retrieved successfully",
+			"data": []map[string]interface{}{
+				{"id": float64(1), "user_id": float64(1), "friend_id": float64(2), "status": "accepted"},
+				{"id": float64(3), "user_id": float64(1), "friend_id": float64(3), "status": "pending"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return all friendships (pending)", func(t *testing.T) {
+		request := getAllRequests(1, 1, "pending")
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Friendships retrieved successfully",
+			"data": []map[string]interface{}{
+				{"id": float64(3), "user_id": float64(1), "friend_id": float64(3), "status": "pending"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return all friendships (accepted)", func(t *testing.T) {
+		request := getAllRequests(1, 1, "accepted")
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Friendships retrieved successfully",
+			"data": []map[string]interface{}{
+				{"id": float64(1), "user_id": float64(1), "friend_id": float64(2), "status": "accepted"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return all friendships (blocked)", func(t *testing.T) {
+		request := getAllRequests(1, 1, "blocked")
+		response := httptest.NewRecorder()
+
+		server.GetAllRequestsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Friendships retrieved successfully",
+			"data":    []map[string]interface{}{},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestGetFriendship(t *testing.T) {
@@ -450,6 +584,20 @@ func createUpdateRequest(userID, requestID int, data []byte) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
 	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, requestID), bytes.NewReader(data))
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
+	rctx.URLParams.Add("request_id", fmt.Sprint(requestID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func getAllRequests(userID, requestID int, status string) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests?status=%s", userID, status), nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
