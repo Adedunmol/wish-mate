@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/routes"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5"
 	"log"
 	"net/http"
 	"os"
@@ -31,7 +31,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	routes.SetupRoutes(config.Config{DB: db, Router: r})
+	routes.SetupRoutes(config.Config{DB: db, Router: r, Queue: qc})
 
 	go checkScheduledJobs(qc.GetClient(), db)
 
@@ -44,13 +44,13 @@ func handlePanics() {
 	}
 }
 
-func checkScheduledJobs(client *asynq.Client, db *sql.DB) {
+func checkScheduledJobs(client *asynq.Client, db *pgx.Conn) {
 
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for t := range ticker.C {
 		// check db for jobs where scheduled = false AND scheduled_at <= now
-		log.Printf("checking due scheduled jobs at: %v", t)
+		log.Printf("checking due scheduled jobs at: %v", t.UTC())
 	}
 }

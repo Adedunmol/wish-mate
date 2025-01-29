@@ -12,7 +12,7 @@ func AuthRoutes(config config.Config) {
 
 	store := NewUserStore(config.DB)
 
-	handler := Handler{Store: store}
+	handler := Handler{Store: store, Queue: config.Queue}
 
 	authRouter.Post("/register", http.HandlerFunc(handler.CreateUserHandler))
 	authRouter.Post("/login", http.HandlerFunc(handler.LoginUserHandler))

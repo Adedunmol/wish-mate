@@ -1,6 +1,8 @@
 package wishlist
 
-import "database/sql"
+import (
+	"github.com/jackc/pgx/v5"
+)
 
 type Store interface {
 	CreateWishlist(userID int, body Wishlist) (WishlistResponse, error)
@@ -10,10 +12,10 @@ type Store interface {
 }
 
 type WishlistStore struct {
-	db *sql.DB
+	db *pgx.Conn
 }
 
-func NewWishlistStore(db *sql.DB) *WishlistStore {
+func NewWishlistStore(db *pgx.Conn) *WishlistStore {
 
 	return &WishlistStore{db: db}
 }

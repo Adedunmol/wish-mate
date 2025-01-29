@@ -1,11 +1,13 @@
 package config
 
 import (
-	"database/sql"
+	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 type Config struct {
-	DB     *sql.DB
+	DB     *pgx.Conn
 	Router *chi.Mux
+	Queue  queue.Queue
 }
