@@ -62,6 +62,7 @@ func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (
 			Name:        item.Name,
 			Description: item.Description,
 			Taken:       false,
+			Link:        item.Link,
 		})
 
 		id += 1
