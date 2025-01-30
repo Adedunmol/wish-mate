@@ -17,8 +17,6 @@ func ConnectDB() (*pgx.Conn, error) {
 
 	conn, err := pgx.Connect(context.Background(), connectionStr)
 
-	defer conn.Close(context.Background())
-
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %v", err)
 	}

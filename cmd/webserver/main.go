@@ -24,6 +24,8 @@ func main() {
 		log.Fatal(errors.Unwrap(err))
 	}
 
+	defer db.Close(context.Background())
+
 	qc, err := queue.NewClient(context.Background())
 	if err != nil {
 		log.Fatal(errors.Unwrap(err))
