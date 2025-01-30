@@ -17,6 +17,7 @@ type Wishlist struct {
 	Description  string `json:"description" validate:"required"`
 	Items        []Item `json:"items,omitempty"`
 	NotifyBefore int    `json:"notify_before" validate:"required"`
+	Date         string `json:"date,omitempty"`
 }
 
 type ItemResponse struct {
@@ -33,6 +34,7 @@ type WishlistResponse struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description"`
 	NotifyBefore int            `json:"notify_before,omitempty"`
+	Date         string         `json:"date,omitempty"`
 	Items        []ItemResponse `json:"items,omitempty"`
 }
 

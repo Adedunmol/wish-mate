@@ -49,11 +49,16 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	if body.Date == "" {
+		body.Date = userData.DateOfBirth
+	}
+
 	wishlist := Wishlist{
 		Name:         body.Name,
 		Description:  body.Description,
 		Items:        body.Items,
 		NotifyBefore: body.NotifyBefore,
+		Date:         body.Date,
 	}
 
 	data, err := h.Store.CreateWishlist(userData.ID, wishlist)

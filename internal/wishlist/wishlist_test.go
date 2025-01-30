@@ -75,6 +75,7 @@ func (s *StubWishlistStore) CreateWishlist(userID int, body wishlist.Wishlist) (
 		Description:  body.Description,
 		NotifyBefore: body.NotifyBefore,
 		Items:        items,
+		Date:         body.Date,
 	}
 
 	s.wishlists = append(s.wishlists, wishlistData)
@@ -166,11 +167,106 @@ func (s *StubWishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 func TestCreateWishlist(t *testing.T) {
 	store := StubWishlistStore{wishlists: make([]wishlist.WishlistResponse, 0)}
 	userStore := StubUserStore{users: []auth.User{
-		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola", DateOfBirth: "2020-01-01"},
 	}}
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 	t.Run("create and return a wishlist (with items)", func(t *testing.T) {
+
+		data := map[string]interface{}{
+			"name":          "Birthday list",
+			"description":   "some random description",
+			"notify_before": 7,
+			"items": []map[string]interface{}{
+				{"name": "phone", "description": "", "link": ""},
+				{"name": "bag", "description": "", "link": ""},
+			},
+		}
+
+		body, _ := json.Marshal(data)
+		request := createWishlistRequest(body, "adedunmola@gmail.com")
+		response := httptest.NewRecorder()
+
+		server.CreateWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlist created successfully",
+			"data": map[string]interface{}{
+				"id":            float64(1),
+				"user_id":       float64(1),
+				"name":          "Birthday list",
+				"description":   "some random description",
+				"notify_before": float64(7),
+				"date":          "2020-01-01",
+				"items": []map[string]interface{}{
+					{"id": float64(1), "name": "phone", "description": "", "taken": false},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusCreated)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("create and return a wishlist (with date)", func(t *testing.T) {
+
+		data := map[string]interface{}{
+			"name":          "Birthday list",
+			"description":   "some random description",
+			"notify_before": 7,
+			"date":          "2025-02-10",
+			"items": []map[string]interface{}{
+				{"name": "phone", "description": "", "link": ""},
+				{"name": "bag", "description": "", "link": ""},
+			},
+		}
+
+		body, _ := json.Marshal(data)
+		request := createWishlistRequest(body, "adedunmola@gmail.com")
+		response := httptest.NewRecorder()
+
+		server.CreateWishlist(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlist created successfully",
+			"data": map[string]interface{}{
+				"id":            float64(1),
+				"user_id":       float64(1),
+				"name":          "Birthday list",
+				"description":   "some random description",
+				"notify_before": float64(7),
+				"date":          "2025-02-10",
+				"items": []map[string]interface{}{
+					{"id": float64(1), "name": "phone", "description": "", "taken": false, "link": ""},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false, "link": ""},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusCreated)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("create and return a wishlist (without date uses the user's birthday)", func(t *testing.T) {
 
 		data := map[string]interface{}{
 			"name":          "Birthday list",
@@ -200,9 +296,10 @@ func TestCreateWishlist(t *testing.T) {
 				"name":          "Birthday list",
 				"description":   "some random description",
 				"notify_before": float64(7),
+				"date":          "2020-01-01",
 				"items": []map[string]interface{}{
-					{"id": float64(1), "name": "phone", "description": "", "taken": false},
-					{"id": float64(2), "name": "bag", "description": "", "taken": false},
+					{"id": float64(1), "name": "phone", "description": "", "taken": false, "link": ""},
+					{"id": float64(2), "name": "bag", "description": "", "taken": false, "link": ""},
 				},
 			},
 		}
@@ -242,6 +339,7 @@ func TestCreateWishlist(t *testing.T) {
 				"name":          "Birthday list",
 				"description":   "some random description",
 				"notify_before": float64(7),
+				"date":          "2020-01-01",
 			},
 		}
 

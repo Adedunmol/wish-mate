@@ -3,12 +3,13 @@ package auth
 import "github.com/Adedunmol/wish-mate/internal/helpers"
 
 type User struct {
-	ID        int
-	FirstName string
-	LastName  string
-	Username  string
-	Email     string
-	Password  string
+	ID          int
+	FirstName   string
+	LastName    string
+	Username    string
+	Email       string
+	Password    string
+	DateOfBirth string
 }
 
 type CreateUserBody struct {
