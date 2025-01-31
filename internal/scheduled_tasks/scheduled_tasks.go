@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/queue"
+	"github.com/jackc/pgx/v5"
 	"log"
 	"time"
 )
@@ -13,6 +14,23 @@ type Store interface {
 	CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error)
 	GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error)
 	UpdateTask(ID int) error
+}
+
+type TaskStore struct {
+	DB *pgx.Conn
+}
+
+func (t *TaskStore) CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error) {
+	return ScheduledTaskResponse{}, nil
+}
+
+func (t *TaskStore) GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error) {
+
+	return nil, nil
+}
+
+func (t *TaskStore) UpdateTask(ID int) error {
+	return nil
 }
 
 type ScheduledTaskResponse struct {

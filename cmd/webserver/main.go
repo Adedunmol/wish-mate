@@ -6,7 +6,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/routes"
-	"github.com/hibiken/asynq"
+	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
 	"github.com/jackc/pgx/v5"
 	"log"
 	"net/http"
@@ -35,7 +35,7 @@ func main() {
 
 	routes.SetupRoutes(config.Config{DB: db, Router: r, Queue: qc})
 
-	go checkScheduledJobs(qc.GetClient(), db)
+	go checkScheduledJobs(qc, db)
 
 	log.Fatal(http.ListenAndServe(os.Getenv("PORT"), r))
 }
@@ -46,13 +46,18 @@ func handlePanics() {
 	}
 }
 
-func checkScheduledJobs(client *asynq.Client, db *pgx.Conn) {
+func checkScheduledJobs(client *queue.Client, db *pgx.Conn) {
 
+	taskStore := &scheduled_tasks.TaskStore{DB: db}
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for t := range ticker.C {
 		// check db for jobs where scheduled = false AND scheduled_at <= now
 		log.Printf("checking due scheduled jobs at: %v", t.UTC())
+
+		if err := scheduled_tasks.GetTasksAndEnqueue(taskStore, client, &t); err != nil {
+			log.Printf(errors.Unwrap(err).Error())
+		}
 	}
 }
