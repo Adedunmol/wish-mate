@@ -7,20 +7,20 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/routes"
 	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("error loading .env file")
+		log.Fatalf("error loading .env file: %s", err)
 	}
 
 	defer handlePanics()

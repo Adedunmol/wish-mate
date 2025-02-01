@@ -59,6 +59,7 @@ github.com/jackc/pgx/v5/pgproto3
 github.com/jackc/pgx/v5/pgtype
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
+github.com/joho/godotenv
 # github.com/leodido/go-urn v1.4.0
 ## explicit; go 1.18
 github.com/leodido/go-urn
