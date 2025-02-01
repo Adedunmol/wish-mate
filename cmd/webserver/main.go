@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-
+	ctx := context.Background()
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("error loading .env file: %s", err)
@@ -30,9 +30,12 @@ func main() {
 		log.Fatal(errors.Unwrap(err))
 	}
 
-	defer db.Close(context.Background())
+	defer db.Close(ctx)
 
-	qc, err := queue.NewClient(context.Background())
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	qc, err := queue.NewClient(ctxWithTimeout)
 	if err != nil {
 		log.Fatal(errors.Unwrap(err))
 	}
@@ -42,6 +45,8 @@ func main() {
 	routes.SetupRoutes(config.Config{DB: db, Router: r, Queue: qc})
 
 	go checkScheduledJobs(qc, db)
+
+	go qc.Run(ctx, db)
 
 	log.Fatal(http.ListenAndServe(os.Getenv("PORT"), r))
 }

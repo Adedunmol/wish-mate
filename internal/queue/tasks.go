@@ -3,7 +3,9 @@ package queue
 import (
 	"context"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/notification"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
@@ -49,6 +51,26 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 		if err != nil {
 			return fmt.Errorf("could not enqueue mail task for: %s: %v", emailPayload.Email, err)
 		}
+		break
+	case TypeNotificationDelivery:
+		notificationPayload := NotificationDeliveryPayload{
+			ID:     taskPayload.Payload["id"].(int),
+			UserID: taskPayload.Payload["user_id"].(int),
+			Title:  taskPayload.Payload["title"].(string),
+			Body:   taskPayload.Payload["body"].(string),
+			Type:   taskPayload.Payload["type"].(string),
+		}
+
+		task, err := notificationPayload.NewTask()
+		if err != nil {
+			return fmt.Errorf("error creating new email task: %v", err)
+		}
+
+		_, err = qc.client.Enqueue(task)
+		if err != nil {
+			return fmt.Errorf("could not enqueue notification task for: notification_id = %d, user_id = %d: %v", notificationPayload.ID, notificationPayload.UserID, err)
+		}
+		break
 	}
 
 	return nil
@@ -79,7 +101,7 @@ func (qc *Client) Close() error {
 	return fmt.Errorf("error closing connection: %v", qc.client.Close())
 }
 
-func (qc *Client) Run(ctx context.Context) error {
+func (qc *Client) Run(ctx context.Context, db *pgx.Conn) error {
 	addr, err := redis.ParseURL(os.Getenv("REDIS_URL"))
 	if err != nil {
 		return fmt.Errorf("error parsing redis url: %v", err)
@@ -90,6 +112,7 @@ func (qc *Client) Run(ctx context.Context) error {
 	mux := asynq.NewServeMux()
 
 	mux.HandleFunc(TypeEmailDelivery, HandleEmailTask)
+	mux.HandleFunc(TypeNotificationDelivery, WrapHandler(notification.NewNotificationStore(db)))
 
 	if err := queueServer.Run(mux); err != nil {
 		return fmt.Errorf("error running queue server: %v", err)

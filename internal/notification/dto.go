@@ -13,7 +13,6 @@ type Notification struct {
 }
 
 type CreateNotificationBody struct {
-	ID     int    `json:"id" validate:"required"`
 	UserID int    `json:"user_id" validate:"required"` // the receiver's id
 	Title  string `json:"title" validate:"required"`
 	Body   string `json:"body" validate:"required"`
