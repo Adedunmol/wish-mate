@@ -68,7 +68,7 @@ func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	// create a scheduleDate using the calculated days before the birthday
+	// create a scheduleDate using the calculated days before the birthday/due date and create a notification and send mails
 	_, err = helpers.CalculateDaysBefore(wishlist.Date, wishlist.NotifyBefore)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
