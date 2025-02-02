@@ -56,6 +56,16 @@ func (s *StubUserStore) FindUserByEmail(email string) (auth.User, error) {
 	return auth.User{}, helpers.ErrNotFound
 }
 
+func (s *StubUserStore) FindUserByID(id int) (auth.User, error) {
+
+	for _, u := range s.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return auth.User{}, helpers.ErrNotFound
+}
+
 func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
 	return storedPassword == candidatePassword
 }
@@ -71,6 +81,16 @@ func (s *FailingStubUserStore) CreateUser(_ *auth.CreateUserBody) (auth.CreateUs
 
 func (s *FailingStubUserStore) FindUserByEmail(_ string) (auth.User, error) {
 	return auth.User{}, ErrNoEntry
+}
+
+func (s *FailingStubUserStore) FindUserByID(id int) (auth.User, error) {
+
+	for _, u := range s.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return auth.User{}, helpers.ErrNotFound
 }
 
 func (s *FailingStubUserStore) ComparePasswords(_, _ string) bool {

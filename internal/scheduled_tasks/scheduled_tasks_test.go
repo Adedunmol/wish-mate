@@ -52,6 +52,10 @@ func (s *StubStore) GetTasks(currentTime *time.Time) ([]scheduled_tasks.Schedule
 	return result, nil
 }
 
+func (s *StubStore) UpdateTask(id int) error {
+	return nil
+}
+
 func TestCreateTask(t *testing.T) {
 	store := &StubStore{tasks: make([]scheduled_tasks.ScheduledTaskResponse, 0)}
 

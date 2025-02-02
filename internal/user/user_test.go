@@ -55,6 +55,16 @@ func (s *StubUserStore) FindUserByEmail(email string) (auth.User, error) {
 	return auth.User{}, helpers.ErrNotFound
 }
 
+func (s *StubUserStore) FindUserByID(id int) (auth.User, error) {
+
+	for _, u := range s.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return auth.User{}, helpers.ErrNotFound
+}
+
 func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
 	return storedPassword == candidatePassword
 }
