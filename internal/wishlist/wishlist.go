@@ -20,7 +20,7 @@ type Handler struct {
 	UserStore auth.Store
 }
 
-func (h Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
 	body, problems, err := helpers.DecodeAndValidate[*Wishlist](request)
 
 	var clientError helpers.ClientError
@@ -223,4 +223,12 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
+
+func (h *Handler) UpdateWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	// for the users that created the wishlist
+}
+
+func (h *Handler) PickWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	// for the friends that are picking the items
 }
