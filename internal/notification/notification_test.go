@@ -182,7 +182,7 @@ func TestGetNotification(t *testing.T) {
 	server := &notification.Handler{Store: store}
 
 	t.Run("get notification", func(t *testing.T) {
-		request := getNotificationRequest(1, 1)
+		request := getNotificationRequest(1, 1, false)
 		response := httptest.NewRecorder()
 
 		server.GetNotificationHandler(response, request)
@@ -209,7 +209,7 @@ func TestGetNotification(t *testing.T) {
 	})
 
 	t.Run("return 404 for no notification with the id", func(t *testing.T) {
-		request := getNotificationRequest(10, 1)
+		request := getNotificationRequest(10, 1, false)
 		response := httptest.NewRecorder()
 
 		server.GetNotificationHandler(response, request)
@@ -251,7 +251,7 @@ func TestGetNotification(t *testing.T) {
 
 	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
 
-		request := getNotificationRequest(1, 2)
+		request := getNotificationRequest(1, 2, false)
 		response := httptest.NewRecorder()
 
 		server.GetNotificationHandler(response, request)
@@ -269,12 +269,66 @@ func TestGetNotification(t *testing.T) {
 }
 
 func TestGetUserNotifications(t *testing.T) {
+	currentTime := time.Now()
 
-	t.Run("get user's notifications", func(t *testing.T) {})
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oye"}
 
-	t.Run("return 400 for no user with the id", func(t *testing.T) {})
+	notif1 := notification.Notification{ID: 1, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif2 := notification.Notification{ID: 2, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif3 := notification.Notification{ID: 3, UserID: user2.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
 
-	t.Run("return 400 for no user id", func(t *testing.T) {})
+	store := &StubStore{
+		users: []auth.User{
+			user1,
+		},
+		notifications: []notification.Notification{
+			notif1,
+			notif2,
+			notif3,
+		},
+	}
+
+	server := &notification.Handler{Store: store}
+
+	t.Run("get user's notifications", func(t *testing.T) {
+		request := getNotificationRequest(1, 1, true)
+		response := httptest.NewRecorder()
+
+		server.GetUserNotificationsHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Notification retrieved successfully",
+			"data": []map[string]interface{}{
+				{"id": float64(notif1.ID), "user_id": float64(user1.ID), "title": notif1.Title, "body": notif1.Body, "type": notif1.Type, "status": notif1.Status, "timestamp": &currentTime},
+				{"id": float64(notif2.ID), "user_id": float64(user1.ID), "title": notif2.Title, "body": notif2.Body, "type": notif2.Type, "status": notif2.Status, "timestamp": &currentTime},
+			},
+		}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 404 for no user with the id", func(t *testing.T) {
+		request := getNotificationRequest(10, 1, true)
+		response := httptest.NewRecorder()
+
+		server.GetNotificationHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "no resource found",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestUpdateNotification(t *testing.T) {
@@ -297,14 +351,24 @@ func TestDeleteNotification(t *testing.T) {
 	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {})
 }
 
-func getNotificationRequest(notificationID, userID int) *http.Request {
+func getNotificationRequest(notificationID, userID int, all bool) *http.Request {
 
+	var request *http.Request
+	var rctx *chi.Context
 	ctx := context.WithValue(context.Background(), "user_id", userID)
-	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), nil)
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("notification_id", fmt.Sprint(notificationID))
-	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
+	if !all {
+		request, _ = http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), nil)
+
+		rctx = chi.NewRouteContext()
+		rctx.URLParams.Add("notification_id", fmt.Sprint(notificationID))
+		rctx.URLParams.Add("user_id", fmt.Sprint(userID))
+	} else {
+		request, _ = http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/users/%d/notifications/", userID), nil)
+
+		rctx = chi.NewRouteContext()
+		rctx.URLParams.Add("user_id", fmt.Sprint(userID))
+	}
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
