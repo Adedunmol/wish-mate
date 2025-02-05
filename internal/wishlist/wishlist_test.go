@@ -772,6 +772,112 @@ func TestDeleteWishlist(t *testing.T) {
 	})
 }
 
+func TestUpdateItem(t *testing.T) {
+
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
+		}},
+	}}
+	userStore := StubUserStore{users: []auth.User{
+		user1,
+		user2,
+	}}
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
+
+	t.Run("update and return item", func(t *testing.T) {
+		data := []byte(`{ "name": "Birthday list 2" }`)
+
+		request := updateWishlistRequest(user1.ID, 1, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("return 404 for no item found with id", func(t *testing.T) {
+		data := []byte(`{ "name": "Birthday list 2" }`)
+
+		request := updateWishlistRequest(user1.ID, 10, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+	})
+
+	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+
+		data := []byte(`{ "name": "Birthday list 2" }`)
+
+		request := updateWishlistRequest(user1.ID, 1, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusForbidden)
+	})
+}
+
+func TestPickItem(t *testing.T) {
+
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
+		}},
+	}}
+	userStore := StubUserStore{users: []auth.User{
+		user1,
+		user2,
+	}}
+
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
+
+	t.Run("update and return item", func(t *testing.T) {
+
+		request := updateWishlistRequest(user1.ID, 1, nil)
+		response := httptest.NewRecorder()
+
+		server.UpdateWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("return 404 for no item found with id", func(t *testing.T) {
+
+		request := updateWishlistRequest(user1.ID, 10, nil)
+		response := httptest.NewRecorder()
+
+		server.UpdateWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+	})
+}
+
 func assertResponseCode(t *testing.T, got, want int) {
 	t.Helper()
 	if got != want {
