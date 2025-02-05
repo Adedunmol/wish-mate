@@ -84,6 +84,11 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusCreated)
 }
 
+func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *http.Request) {
+	// should be verbose (include the details of those who picked an item) if due date >= current date
+
+}
+
 func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {
 	id := chi.URLParam(request, "id")
 
@@ -107,6 +112,7 @@ func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.
 
 	newUserID := userID.(int)
 
+	// should be verbose (include the details of those who picked an item) if due date >= current date
 	wishlist, err := h.Store.GetWishlistByID(wishlistID, newUserID)
 
 	if err != nil {
