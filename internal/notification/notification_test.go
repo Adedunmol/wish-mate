@@ -1,6 +1,7 @@
 package notification_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -332,23 +333,160 @@ func TestGetUserNotifications(t *testing.T) {
 }
 
 func TestUpdateNotification(t *testing.T) {
+	currentTime := time.Now()
 
-	t.Run("update notification's status", func(t *testing.T) {})
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oye"}
 
-	t.Run("return 404 for no notification with the id", func(t *testing.T) {})
+	notif1 := notification.Notification{ID: 1, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif2 := notification.Notification{ID: 2, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif3 := notification.Notification{ID: 3, UserID: user2.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
 
-	t.Run("return 400 for invalid status", func(t *testing.T) {})
+	store := &StubStore{
+		users: []auth.User{
+			user1,
+		},
+		notifications: []notification.Notification{
+			notif1,
+			notif2,
+			notif3,
+		},
+	}
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {})
+	server := &notification.Handler{Store: store}
+
+	t.Run("update notification's status", func(t *testing.T) {
+		data := []byte(`{"status": "read"}`)
+		request := updateNotificationRequest(notif1.ID, user1.ID, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 404 for no notification with the id", func(t *testing.T) {
+		data := []byte(`{"status": "read"}`)
+		request := updateNotificationRequest(10, user1.ID, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 400 for invalid status", func(t *testing.T) {
+		data := []byte(`{"status": "random"}`)
+		request := updateNotificationRequest(notif1.ID, user1.ID, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+		data := []byte(`{"status": "read"}`)
+		request := updateNotificationRequest(notif1.ID, user2.ID, data)
+		response := httptest.NewRecorder()
+
+		server.UpdateNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusForbidden)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestDeleteNotification(t *testing.T) {
+	currentTime := time.Now()
 
-	t.Run("delete notification's status", func(t *testing.T) {})
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oye"}
 
-	t.Run("return 404 for no notification with the id", func(t *testing.T) {})
+	notif1 := notification.Notification{ID: 1, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif2 := notification.Notification{ID: 2, UserID: user1.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
+	notif3 := notification.Notification{ID: 3, UserID: user2.ID, Title: "", Body: "", Type: "", Status: "unread", Timestamp: &currentTime}
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {})
+	store := &StubStore{
+		users: []auth.User{
+			user1,
+		},
+		notifications: []notification.Notification{
+			notif1,
+			notif2,
+			notif3,
+		},
+	}
+
+	server := &notification.Handler{Store: store}
+
+	t.Run("delete notification", func(t *testing.T) {
+		request := deleteNotificationRequest(notif1.ID, user1.ID)
+		response := httptest.NewRecorder()
+
+		server.DeleteNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 404 for no notification with the id", func(t *testing.T) {
+		request := deleteNotificationRequest(10, user1.ID)
+		response := httptest.NewRecorder()
+
+		server.DeleteNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+		request := deleteNotificationRequest(notif1.ID, user2.ID)
+		response := httptest.NewRecorder()
+
+		server.DeleteNotification(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{}
+
+		assertResponseCode(t, response.Code, http.StatusForbidden)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func getNotificationRequest(notificationID, userID int, all bool) *http.Request {
@@ -371,6 +509,30 @@ func getNotificationRequest(notificationID, userID int, all bool) *http.Request 
 	}
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func updateNotificationRequest(notificationID, userID int, data []byte) *http.Request {
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), bytes.NewBuffer(data))
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("notification_id", fmt.Sprint(notificationID))
+	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
+
+	return request
+}
+
+func deleteNotificationRequest(notificationID, userID int) *http.Request {
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+
+	request, _ := http.NewRequestWithContext(ctx, http.MethodDelete, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("notification_id", fmt.Sprint(notificationID))
+	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
 
 	return request
 }

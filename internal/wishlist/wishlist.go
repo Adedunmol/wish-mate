@@ -217,6 +217,8 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
+	// delete scheduled job for the wishlist
+
 	response := Response{
 		Status:  "Success",
 		Message: "Wishlist deleted successfully",

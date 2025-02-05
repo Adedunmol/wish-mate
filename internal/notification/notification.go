@@ -130,3 +130,7 @@ func (h *Handler) GetUserNotificationsHandler(responseWriter http.ResponseWriter
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) UpdateNotification(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) DeleteNotification(responseWriter http.ResponseWriter, request *http.Request) {}
