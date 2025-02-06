@@ -227,3 +227,7 @@ func (h *Handler) GetRequestHandler(responseWriter http.ResponseWriter, request 
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) GetAllFriends(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) GetUser(responseWriter http.ResponseWriter, request *http.Request) {}
