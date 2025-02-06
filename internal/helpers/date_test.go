@@ -59,5 +59,35 @@ func TestCalculateDaysBefore(t *testing.T) {
 		}
 	})
 
-	t.Run("return error for invalid date", func(t *testing.T) {})
+	t.Run("return error for invalid month", func(t *testing.T) {
+		_, err := helpers.CalculateDaysBefore("2025-14-10", 2)
+
+		if err == nil {
+			t.Errorf("expected error for month out of range")
+		}
+	})
+
+	t.Run("return error for invalid day", func(t *testing.T) {
+		_, err := helpers.CalculateDaysBefore("2025-02-30", 2)
+
+		if err == nil {
+			t.Errorf("expected error for day out of range")
+		}
+	})
+
+	t.Run("return error for invalid format", func(t *testing.T) {
+		_, err := helpers.CalculateDaysBefore("2025/02/30", 2)
+
+		if err == nil {
+			t.Errorf("expected error for invalid format")
+		}
+	})
+
+	t.Run("return error for negative notifyBefore", func(t *testing.T) {
+		_, err := helpers.CalculateDaysBefore("2025-02-05", -1)
+
+		if err == nil {
+			t.Errorf("expected error for negative notifyBefore")
+		}
+	})
 }

@@ -7,6 +7,10 @@ import (
 
 func CalculateDaysBefore(dateOfBirth string, notifyBefore int) (time.Time, error) {
 
+	if notifyBefore < 0 {
+		return time.Time{}, fmt.Errorf("notifyBefore must be a positive number")
+	}
+
 	dob, err := time.Parse("2006-01-02", dateOfBirth)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("error parsing date: use YYYY-MM-DD: %v", err)
