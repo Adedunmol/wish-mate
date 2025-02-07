@@ -131,6 +131,99 @@ func (h *Handler) GetUserNotificationsHandler(responseWriter http.ResponseWriter
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) UpdateNotification(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) UpdateNotification(responseWriter http.ResponseWriter, request *http.Request) {
+	notificationID := chi.URLParam(request, "notification_id")
 
-func (h *Handler) DeleteNotification(responseWriter http.ResponseWriter, request *http.Request) {}
+	if notificationID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newNotificationID, err := strconv.Atoi(notificationID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	notification, err := h.Store.GetNotification(newNotificationID)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if notification.UserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	notification, err = h.Store.UpdateNotification(newNotificationID, "read")
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Notification updated successfully",
+		Data:    notification,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
+
+func (h *Handler) DeleteNotification(responseWriter http.ResponseWriter, request *http.Request) {
+	notificationID := chi.URLParam(request, "notification_id")
+
+	if notificationID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newNotificationID, err := strconv.Atoi(notificationID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	notification, err := h.Store.GetNotification(newNotificationID)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if notification.UserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	err = h.Store.DeleteNotification(newNotificationID)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Notification deleted successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}

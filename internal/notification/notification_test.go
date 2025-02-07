@@ -1,7 +1,6 @@
 package notification_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -62,7 +61,12 @@ func (s *StubStore) GetNotification(id int) (notification.Notification, error) {
 	return notification.Notification{}, helpers.ErrNotFound
 }
 func (s *StubStore) UpdateNotification(ID int, status string) (notification.Notification, error) {
-	return notification.Notification{}, nil
+
+	notif, _ := s.GetNotification(ID)
+
+	notif.Status = status
+
+	return notif, nil
 }
 
 func (s *StubStore) DeleteNotification(id int) error {
@@ -356,8 +360,7 @@ func TestUpdateNotification(t *testing.T) {
 	server := &notification.Handler{Store: store}
 
 	t.Run("update notification's status", func(t *testing.T) {
-		data := []byte(`{"status": "read"}`)
-		request := updateNotificationRequest(notif1.ID, user1.ID, data)
+		request := updateNotificationRequest(notif1.ID, user1.ID)
 		response := httptest.NewRecorder()
 
 		server.UpdateNotification(response, request)
@@ -365,15 +368,26 @@ func TestUpdateNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Notification retrieved successfully",
+			"data": map[string]interface{}{
+				"id":        float64(1),
+				"user_id":   float64(user1.ID),
+				"title":     notif1.Title,
+				"body":      notif1.Body,
+				"type":      notif1.Type,
+				"status":    "read",
+				"timestamp": &currentTime,
+			},
+		}
 
 		assertResponseCode(t, response.Code, http.StatusOK)
 		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 404 for no notification with the id", func(t *testing.T) {
-		data := []byte(`{"status": "read"}`)
-		request := updateNotificationRequest(10, user1.ID, data)
+		request := updateNotificationRequest(10, user1.ID)
 		response := httptest.NewRecorder()
 
 		server.UpdateNotification(response, request)
@@ -381,15 +395,16 @@ func TestUpdateNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
 
 		assertResponseCode(t, response.Code, http.StatusNotFound)
 		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 400 for invalid status", func(t *testing.T) {
-		data := []byte(`{"status": "random"}`)
-		request := updateNotificationRequest(notif1.ID, user1.ID, data)
+		request := updateNotificationRequest(notif1.ID, user1.ID)
 		response := httptest.NewRecorder()
 
 		server.UpdateNotification(response, request)
@@ -397,15 +412,15 @@ func TestUpdateNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
-
+		want := map[string]interface{}{
+			"message": "invalid status",
+		}
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
-		data := []byte(`{"status": "read"}`)
-		request := updateNotificationRequest(notif1.ID, user2.ID, data)
+		request := updateNotificationRequest(notif1.ID, user2.ID)
 		response := httptest.NewRecorder()
 
 		server.UpdateNotification(response, request)
@@ -413,7 +428,9 @@ func TestUpdateNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"message": "forbidden from accessing another user's resource",
+		}
 
 		assertResponseCode(t, response.Code, http.StatusForbidden)
 		assertResponseBody(t, got, want)
@@ -452,7 +469,10 @@ func TestDeleteNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Notification deleted successfully",
+		}
 
 		assertResponseCode(t, response.Code, http.StatusOK)
 		assertResponseBody(t, got, want)
@@ -467,7 +487,9 @@ func TestDeleteNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
 
 		assertResponseCode(t, response.Code, http.StatusNotFound)
 		assertResponseBody(t, got, want)
@@ -482,7 +504,9 @@ func TestDeleteNotification(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
-		want := map[string]interface{}{}
+		want := map[string]interface{}{
+			"message": "forbidden from accessing another user's resource",
+		}
 
 		assertResponseCode(t, response.Code, http.StatusForbidden)
 		assertResponseBody(t, got, want)
@@ -513,10 +537,11 @@ func getNotificationRequest(notificationID, userID int, all bool) *http.Request 
 	return request
 }
 
-func updateNotificationRequest(notificationID, userID int, data []byte) *http.Request {
+func updateNotificationRequest(notificationID, userID int) *http.Request {
 	ctx := context.WithValue(context.Background(), "user_id", userID)
+	ctx = context.WithValue(ctx, "notification_id", notificationID)
 
-	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), bytes.NewBuffer(data))
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/users/%d/notifications/%d", userID, notificationID), nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("notification_id", fmt.Sprint(notificationID))
