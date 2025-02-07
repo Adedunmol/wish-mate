@@ -14,6 +14,7 @@ type Store interface {
 	CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error)
 	GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error)
 	UpdateTask(ID int) error
+	DeleteTask(ID int) error
 }
 
 type TaskStore struct {
@@ -93,6 +94,16 @@ func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) erro
 		if err != nil {
 			return fmt.Errorf("error updating task: %v", err)
 		}
+	}
+
+	return nil
+}
+
+func DeleteTask(store Store, id int) error {
+	err := store.DeleteTask(id)
+
+	if err != nil {
+		return fmt.Errorf("error deleting task: %v", err)
 	}
 
 	return nil

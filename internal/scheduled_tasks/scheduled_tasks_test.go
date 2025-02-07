@@ -3,6 +3,7 @@ package scheduled_tasks_test
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
 	"testing"
 	"time"
@@ -54,6 +55,18 @@ func (s *StubStore) GetTasks(currentTime *time.Time) ([]scheduled_tasks.Schedule
 
 func (s *StubStore) UpdateTask(id int) error {
 	return nil
+}
+
+func (s *StubStore) DeleteTask(id int) error {
+
+	for index, task := range s.tasks {
+		if task.ID == id {
+			s.tasks = append(s.tasks[:index], s.tasks[index+1:]...)
+			return nil
+		}
+	}
+
+	return helpers.ErrNotFound
 }
 
 func TestCreateTask(t *testing.T) {
@@ -125,6 +138,35 @@ func TestGetTasks(t *testing.T) {
 
 		if len(tasks) != 0 {
 			t.Error("tasks should have no tasks")
+		}
+	})
+}
+
+func DeleteTask(t *testing.T) {
+	store := &StubStore{tasks: []scheduled_tasks.ScheduledTaskResponse{
+		{ID: 1, TaskName: "birthday", Payload: []byte(`{"title": "some random title"}`), ExecuteAt: time.Now().Add(10 * time.Minute), Status: "pending"},
+		{ID: 2, TaskName: "birthday", Payload: []byte(`{"title": "some random title"}`), ExecuteAt: time.Now().Add(1 * time.Minute), Status: "pending"},
+		{ID: 4, TaskName: "birthday", Payload: []byte(`{"title": "some random title"}`), ExecuteAt: time.Now().Add(-(1 * time.Minute)), Status: "scheduled"},
+	}}
+
+	t.Run("delete a task", func(t *testing.T) {
+
+		err := scheduled_tasks.DeleteTask(store, 1)
+		if err != nil {
+			t.Error("error should be nil")
+		}
+
+		if len(store.tasks) != 2 {
+			t.Error("tasks should have two tasks")
+		}
+	})
+
+	t.Run("return error for no task found with id", func(t *testing.T) {
+
+		err := scheduled_tasks.DeleteTask(store, 10)
+
+		if err == nil {
+			t.Error("error should not be nil for no task found with id")
 		}
 	})
 }
