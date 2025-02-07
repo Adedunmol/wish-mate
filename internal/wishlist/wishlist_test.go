@@ -419,6 +419,27 @@ func TestCreateWishlist(t *testing.T) {
 	})
 }
 
+func TestGetUserWishlists(t *testing.T) {
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
+		}},
+	}}
+	userStore := StubUserStore{users: []auth.User{
+		user1,
+		user2,
+	}}
+	_ = wishlist.Handler{Store: &store, UserStore: &userStore}
+
+	t.Run("get user's wishlists", func(t *testing.T) {})
+
+	t.Run("return 404 for no user with the id", func(t *testing.T) {})
+}
+
 func TestGetWishlist(t *testing.T) {
 	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
 	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}

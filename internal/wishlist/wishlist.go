@@ -86,7 +86,7 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 
 func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *http.Request) {
 	// should be verbose (include the details of those who picked an item) if due date >= current date
-
+	// should not include items that have been picked for other users but should include for the creator
 }
 
 func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {
@@ -113,6 +113,7 @@ func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.
 	newUserID := userID.(int)
 
 	// should be verbose (include the details of those who picked an item) if due date >= current date
+	// should not include items that have been picked for other users but should include for the creator
 	wishlist, err := h.Store.GetWishlistByID(wishlistID, newUserID)
 
 	if err != nil {
