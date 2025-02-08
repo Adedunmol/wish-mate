@@ -234,10 +234,63 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
+func (h *Handler) GetItemHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) DeleteItemHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
 func (h *Handler) UpdateWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	// for the users that created the wishlist
 }
 
 func (h *Handler) PickWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	// for the friends that are picking the items
+	wishlistID := chi.URLParam(request, "wishlist_id")
+
+	if wishlistID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("wishlist id is required"), http.StatusBadRequest, "wishlist id is required", nil))
+		return
+	}
+
+	itemID := chi.URLParam(request, "item_id")
+
+	if itemID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("item id is required"), http.StatusBadRequest, "item id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newWishlistID, err := strconv.Atoi(wishlistID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newItemID, err := strconv.Atoi(itemID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	data, err := h.Store.PickItem(newWishlistID, newItemID, newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Item picked successfully",
+		Data:    data,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }

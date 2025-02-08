@@ -43,3 +43,10 @@ type UpdateWishlist struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
+
+type UpdateItem struct {
+	helpers.Validation
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Link        string `json:"link,omitempty"`
+}

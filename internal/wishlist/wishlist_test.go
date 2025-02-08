@@ -174,6 +174,45 @@ func (s *StubWishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 	return helpers.ErrNotFound
 }
 
+func (s *StubWishlistStore) GetItem(wishlistID, itemID int) (wishlist.ItemResponse, error) {
+
+	for _, w := range s.wishlists {
+		if w.ID == wishlistID {
+			for _, i := range w.Items {
+				if i.ID == itemID {
+					return i, nil
+				}
+			}
+		}
+	}
+
+	return wishlist.ItemResponse{}, helpers.ErrNotFound
+}
+
+func (s *StubWishlistStore) UpdateItem(wishlistID, itemID int, body wishlist.Item) (wishlist.ItemResponse, error) {
+
+	return wishlist.ItemResponse{}, nil
+}
+
+func (s *StubWishlistStore) PickItem(wishlistID, itemID, userID int) (wishlist.ItemResponse, error) {
+
+	for _, w := range s.wishlists {
+		if w.ID == wishlistID {
+			for _, i := range w.Items {
+				if i.ID == itemID && !i.Taken {
+					i.Taken = true
+
+					return i, nil
+				} else if i.ID == itemID && i.Taken {
+					return wishlist.ItemResponse{}, helpers.NewHTTPError(nil, http.StatusConflict, "Item picked already", nil)
+				}
+			}
+		}
+	}
+
+	return wishlist.ItemResponse{}, helpers.ErrNotFound
+}
+
 func TestCreateWishlist(t *testing.T) {
 	store := StubWishlistStore{wishlists: make([]wishlist.WishlistResponse, 0)}
 	userStore := StubUserStore{users: []auth.User{
@@ -872,30 +911,66 @@ func TestPickItem(t *testing.T) {
 
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
-	t.Run("update and return item", func(t *testing.T) {
+	t.Run("pick and return item", func(t *testing.T) {
 
-		request := updateWishlistRequest(user1.ID, 1, nil)
+		request := pickItemRequest(user1.ID, 1, 2)
 		response := httptest.NewRecorder()
 
-		server.UpdateWishlistItemHandler(response, request)
+		server.PickWishlistItemHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Item picked successfully",
+			"data": map[string]interface{}{
+				"id":          float64(2),
+				"name":        "bag",
+				"description": "",
+				"link":        "",
+				"taken":       true,
+			},
+		}
+
 		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 409 for trying to pick a picked item", func(t *testing.T) {
+
+		request := pickItemRequest(user1.ID, 1, 1)
+		response := httptest.NewRecorder()
+
+		server.PickWishlistItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "Item picked already",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusConflict)
+		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 404 for no item found with id", func(t *testing.T) {
 
-		request := updateWishlistRequest(user1.ID, 10, nil)
+		request := pickItemRequest(user1.ID, 10, 10)
 		response := httptest.NewRecorder()
 
-		server.UpdateWishlistItemHandler(response, request)
+		server.PickWishlistItemHandler(response, request)
 
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
+
 		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
 	})
 }
 
@@ -941,6 +1016,20 @@ func updateWishlistRequest(userID, wishlistID int, body []byte) *http.Request {
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", fmt.Sprint(wishlistID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func pickItemRequest(userID, wishlistID, itemID int) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(wishlistID), fmt.Sprint(itemID)), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("wishlist_id", fmt.Sprint(wishlistID))
+	rctx.URLParams.Add("item_id", fmt.Sprint(itemID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
