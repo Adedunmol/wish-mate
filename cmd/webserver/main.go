@@ -70,5 +70,7 @@ func checkScheduledJobs(client *queue.Client, db *pgx.Conn) {
 		if err := scheduled_tasks.GetTasksAndEnqueue(taskStore, client, &t); err != nil {
 			log.Printf(errors.Unwrap(err).Error())
 		}
+
+		// get today's birthdays and send notifications to their friends
 	}
 }

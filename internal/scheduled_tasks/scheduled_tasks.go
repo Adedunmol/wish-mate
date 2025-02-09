@@ -21,6 +21,11 @@ type TaskStore struct {
 	DB *pgx.Conn
 }
 
+func (t *TaskStore) DeleteTask(ID int) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t *TaskStore) CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error) {
 	return ScheduledTaskResponse{}, nil
 }

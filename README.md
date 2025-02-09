@@ -1,6 +1,14 @@
 # Wish-mate
 Wishlists and friendship management software.
 
+### Features
+- Manage friendships
+- Create wishlists
+- Specify when friends should get notified for wishlists
+- Get notified through mail and in-app notifications for friends' wishlists 
+- Pick items on wishlists
+- Notify users' friends on their birthdays 
+
 ### Technologies used
 - [x] Golang
 - [x] Goose
