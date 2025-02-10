@@ -234,9 +234,111 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) GetItemHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) GetItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	wishlistID := chi.URLParam(request, "wishlist_id")
 
-func (h *Handler) DeleteItemHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+	if wishlistID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("wishlist id is required"), http.StatusBadRequest, "wishlist id is required", nil))
+		return
+	}
+
+	itemID := chi.URLParam(request, "item_id")
+
+	if itemID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("item id is required"), http.StatusBadRequest, "item id is required", nil))
+		return
+	}
+
+	newWishlistID, err := strconv.Atoi(wishlistID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newItemID, err := strconv.Atoi(itemID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	data, err := h.Store.GetItem(newWishlistID, newItemID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Item retrieved successfully",
+		Data:    data,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
+
+func (h *Handler) DeleteItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
+
+	wishlistID := chi.URLParam(request, "wishlist_id")
+
+	if wishlistID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("wishlist id is required"), http.StatusBadRequest, "wishlist id is required", nil))
+		return
+	}
+
+	itemID := chi.URLParam(request, "item_id")
+
+	if itemID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("item id is required"), http.StatusBadRequest, "item id is required", nil))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newWishlistID, err := strconv.Atoi(wishlistID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newItemID, err := strconv.Atoi(itemID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	wishlist, err := h.Store.GetWishlistByID(newWishlistID, newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if wishlist.UserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	err = h.Store.DeleteItem(newWishlistID, newItemID)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Item deleted successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
 
 func (h *Handler) UpdateWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	// for the users that created the wishlist

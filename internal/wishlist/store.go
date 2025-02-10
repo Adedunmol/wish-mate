@@ -12,6 +12,7 @@ type Store interface {
 	GetItem(wishlistID, itemID int) (ItemResponse, error)
 	UpdateItem(wishlistID, itemID int, body Item) (ItemResponse, error)
 	PickItem(wishlistID, itemID, userID int) (ItemResponse, error)
+	DeleteItem(wishlistID, itemID int) error
 }
 
 type WishlistStore struct {
@@ -51,4 +52,8 @@ func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body Item) (ItemRespo
 
 func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, error) {
 	return ItemResponse{}, nil
+}
+
+func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
+	return nil
 }

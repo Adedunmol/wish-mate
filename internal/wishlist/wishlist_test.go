@@ -194,6 +194,21 @@ func (s *StubWishlistStore) UpdateItem(wishlistID, itemID int, body wishlist.Ite
 	return wishlist.ItemResponse{}, nil
 }
 
+func (s *StubWishlistStore) DeleteItem(wishlistID, itemID int) error {
+
+	for _, w := range s.wishlists {
+		if w.ID == wishlistID {
+			for _, i := range w.Items {
+				if i.ID == itemID {
+					return nil
+				}
+			}
+		}
+	}
+
+	return helpers.ErrNotFound
+}
+
 func (s *StubWishlistStore) PickItem(wishlistID, itemID, userID int) (wishlist.ItemResponse, error) {
 
 	for _, w := range s.wishlists {
@@ -974,6 +989,182 @@ func TestPickItem(t *testing.T) {
 	})
 }
 
+func TestGetItem(t *testing.T) {
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
+		}},
+	}}
+	userStore := StubUserStore{users: []auth.User{
+		user1,
+		user2,
+	}}
+
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
+
+	t.Run("return item", func(t *testing.T) {
+		request := getItemRequest(user1.ID, 1, 1)
+		response := httptest.NewRecorder()
+
+		server.GetItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Item retrieved successfully",
+			"data": map[string]interface{}{
+				"id":          float64(1),
+				"name":        "phone",
+				"description": "",
+				"link":        "",
+				"taken":       true,
+			},
+		}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 400 for no item/wishlist id", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "user_id", user1.ID)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(1), ""), nil)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("wishlist_id", fmt.Sprint(1))
+
+		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+		response := httptest.NewRecorder()
+
+		server.GetItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "item id is required",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 404 for no item with id", func(t *testing.T) {
+		request := getItemRequest(user1.ID, 1, 10)
+		response := httptest.NewRecorder()
+
+		server.GetItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+}
+
+func TestDeleteItem(t *testing.T) {
+	user1 := auth.User{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"}
+	user2 := auth.User{ID: 2, FirstName: "Ade", LastName: "Oyewale", Password: "password", Email: "ade@gmail.com", Username: "Ade"}
+
+	store := StubWishlistStore{wishlists: []wishlist.WishlistResponse{
+		{ID: 1, UserID: user1.ID, Name: "Birthday list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "phone", Description: "", Taken: true},
+			{ID: 2, Name: "bag", Description: "", Taken: false},
+		}},
+	}}
+	userStore := StubUserStore{users: []auth.User{
+		user1,
+		user2,
+	}}
+
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
+
+	t.Run("delete item", func(t *testing.T) {
+		request := deleteItemRequest(user1.ID, 1, 1)
+		response := httptest.NewRecorder()
+
+		server.DeleteItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Item deleted successfully",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 403 for accessing another user's item", func(t *testing.T) {
+		request := deleteItemRequest(user2.ID, 1, 1)
+		response := httptest.NewRecorder()
+
+		server.DeleteItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "forbidden from accessing the resource",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusForbidden)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 400 for no item/wishlist id", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "user_id", user1.ID)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodDelete, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(1), ""), nil)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("wishlist_id", fmt.Sprint(1))
+
+		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+		response := httptest.NewRecorder()
+
+		server.DeleteItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "item id is required",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return a 404 for no item with id", func(t *testing.T) {
+		request := deleteItemRequest(user1.ID, 1, 10)
+		response := httptest.NewRecorder()
+
+		server.DeleteItemHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
+}
+
 func assertResponseCode(t *testing.T, got, want int) {
 	t.Helper()
 	if got != want {
@@ -1003,6 +1194,34 @@ func getWishlistRequest(userID, wishlistID int) *http.Request {
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", fmt.Sprint(wishlistID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func getItemRequest(userID, wishlistID, itemID int) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(wishlistID), fmt.Sprint(itemID)), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("wishlist_id", fmt.Sprint(wishlistID))
+	rctx.URLParams.Add("item_id", fmt.Sprint(itemID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func deleteItemRequest(userID, wishlistID, itemID int) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodDelete, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(wishlistID), fmt.Sprint(itemID)), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("wishlist_id", fmt.Sprint(wishlistID))
+	rctx.URLParams.Add("item_id", fmt.Sprint(itemID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 

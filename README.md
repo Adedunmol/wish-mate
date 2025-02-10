@@ -7,7 +7,6 @@ Wishlists and friendship management software.
 - Specify when friends should get notified for wishlists
 - Get notified through mail and in-app notifications for friends' wishlists 
 - Pick items on wishlists
-- Notify users' friends on their birthdays 
 
 ### Technologies used
 - [x] Golang
@@ -17,4 +16,5 @@ Wishlists and friendship management software.
 - [x] Redis
 
 ### Further improvements
-1. Implement users picking items in fractions for the items marked as fractions. 
+1. Implement users picking items in fractions for the items marked as fractions.
+2. Notify users' friends on their birthdays 
