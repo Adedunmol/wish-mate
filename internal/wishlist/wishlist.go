@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -18,6 +19,7 @@ type Response struct {
 type Handler struct {
 	Store     Store
 	UserStore auth.Store
+	TaskStore scheduled_tasks.TaskStore
 }
 
 func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
@@ -269,6 +271,12 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	// delete scheduled job for the wishlist
+	//err = h.TaskStore.DeleteTask(wishlistID)
+	//
+	//if err != nil {
+	//	helpers.HandleError(responseWriter, err)
+	//	return
+	//}
 
 	response := Response{
 		Status:  "Success",
