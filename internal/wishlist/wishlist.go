@@ -87,6 +87,50 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *http.Request) {
 	// should be verbose (include the details of those who picked an item) if due date >= current date
 	// should not include items that have been picked for other users but should include for the creator
+
+	userID := chi.URLParam(request, "user_id")
+
+	if userID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "user id is required", nil))
+		return
+	}
+
+	currentUserID := request.Context().Value("user_id")
+
+	if currentUserID == nil || currentUserID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newUserID, err := strconv.Atoi(userID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newCurrentUserID := currentUserID.(int)
+
+	_, err = h.UserStore.FindUserByID(newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusNotFound, "no user found with the id", nil))
+		return
+	}
+
+	wishlists, err := h.Store.GetUserWishlists(newUserID, newCurrentUserID == newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrNotFound)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Wishlists retrieved successfully",
+		Data:    wishlists,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
 func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.Request) {

@@ -128,6 +128,44 @@ func (s *StubWishlistStore) GetWishlistByID(wishlistID, userID int) (wishlist.Wi
 	return wishlist.WishlistResponse{}, helpers.ErrNotFound
 }
 
+func (s *StubWishlistStore) GetUserWishlists(userID int, isOwner bool) ([]wishlist.WishlistResponse, error) {
+	response := make([]wishlist.WishlistResponse, 0)
+
+	for _, w := range s.wishlists {
+		var data wishlist.WishlistResponse
+		if w.UserID == userID {
+
+			data.UserID = w.UserID
+			data.ID = w.ID
+			data.Description = w.Description
+			data.Name = w.Name
+			data.NotifyBefore = w.NotifyBefore
+
+			var items []wishlist.ItemResponse
+
+			if !isOwner {
+				for _, i := range w.Items {
+					if !i.Taken {
+						items = append(items, wishlist.ItemResponse{
+							ID:          i.ID,
+							Name:        i.Name,
+							Description: i.Description,
+							Taken:       i.Taken,
+						})
+					}
+				}
+				data.Items = items
+			} else {
+				data.Items = w.Items
+			}
+
+			response = append(response, data)
+		}
+	}
+
+	return response, nil
+}
+
 func (s *StubWishlistStore) UpdateWishlistByID(wishlistID, userID int, body wishlist.UpdateWishlist) (wishlist.WishlistResponse, error) {
 	var response wishlist.WishlistResponse
 
@@ -482,16 +520,140 @@ func TestGetUserWishlists(t *testing.T) {
 			{ID: 1, Name: "phone", Description: "", Taken: true},
 			{ID: 2, Name: "bag", Description: "", Taken: false},
 		}},
+		{ID: 2, UserID: user1.ID, Name: "Grad list", Description: "some random description", NotifyBefore: 7, Items: []wishlist.ItemResponse{
+			{ID: 1, Name: "clothes", Description: "", Taken: true},
+			{ID: 2, Name: "shoes", Description: "", Taken: false},
+		}},
 	}}
 	userStore := StubUserStore{users: []auth.User{
 		user1,
 		user2,
 	}}
-	_ = wishlist.Handler{Store: &store, UserStore: &userStore}
+	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
-	t.Run("get user's wishlists", func(t *testing.T) {})
+	t.Run("get user's wishlists (owner)", func(t *testing.T) {
 
-	t.Run("return 404 for no user with the id", func(t *testing.T) {})
+		request := getUserWishlistsRequest(user1.ID)
+		response := httptest.NewRecorder()
+
+		server.GetAllWishlists(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlists retrieved successfully",
+			"data": []map[string]interface{}{
+				{
+					"id":            float64(1),
+					"user_id":       float64(1),
+					"name":          "Birthday list",
+					"description":   "some random description",
+					"notify_before": float64(7),
+					"items": []map[string]interface{}{
+						{"id": float64(1), "name": "phone", "description": "", "link": "", "taken": true},
+						{"id": float64(2), "name": "bag", "description": "", "link": "", "taken": false},
+					},
+				},
+				{
+					"id":            float64(2),
+					"user_id":       float64(1),
+					"name":          "Grad list",
+					"description":   "some random description",
+					"notify_before": float64(7),
+					"items": []map[string]interface{}{
+						{"id": float64(1), "name": "clothes", "description": "", "link": "", "taken": true},
+						{"id": float64(2), "name": "shoes", "description": "", "link": "", "taken": false},
+					},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("get user's wishlists (others)", func(t *testing.T) {
+
+		ctx := context.WithValue(context.Background(), "user_id", user2.ID)
+		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("users/%s/wishlists", fmt.Sprint(user1.ID)), nil)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("user_id", fmt.Sprint(user1.ID))
+
+		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+		response := httptest.NewRecorder()
+
+		server.GetAllWishlists(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"status":  "Success",
+			"message": "Wishlists retrieved successfully",
+			"data": []map[string]interface{}{
+				{
+					"id":            float64(1),
+					"user_id":       float64(1),
+					"name":          "Birthday list",
+					"description":   "some random description",
+					"notify_before": float64(7),
+					"items": []map[string]interface{}{
+						{"id": float64(2), "name": "bag", "description": "", "link": "", "taken": false},
+					},
+				},
+				{
+					"id":            float64(2),
+					"user_id":       float64(1),
+					"name":          "Grad list",
+					"description":   "some random description",
+					"notify_before": float64(7),
+					"items": []map[string]interface{}{
+						{"id": float64(2), "name": "shoes", "description": "", "link": "", "taken": false},
+					},
+				},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return 404 for no user with the id", func(t *testing.T) {
+
+		request := getUserWishlistsRequest(3)
+		response := httptest.NewRecorder()
+
+		server.GetAllWishlists(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "no user found with the id",
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func TestGetWishlist(t *testing.T) {
@@ -1194,6 +1356,19 @@ func getWishlistRequest(userID, wishlistID int) *http.Request {
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", fmt.Sprint(wishlistID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func getUserWishlistsRequest(userID int) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("users/%s/wishlists", fmt.Sprint(userID)), nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 

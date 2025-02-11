@@ -7,6 +7,7 @@ import (
 type Store interface {
 	CreateWishlist(userID int, body Wishlist) (WishlistResponse, error)
 	GetWishlistByID(wishlistID, userID int) (WishlistResponse, error)
+	GetUserWishlists(userID int, isOwner bool) ([]WishlistResponse, error)
 	UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error)
 	DeleteWishlistByID(wishlistID, userID int) error
 	GetItem(wishlistID, itemID int) (ItemResponse, error)
@@ -31,6 +32,10 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 
 func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistResponse, error) {
 	return WishlistResponse{}, nil
+}
+
+func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistResponse, error) {
+	return nil, nil
 }
 
 func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error) {
