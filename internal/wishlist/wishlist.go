@@ -394,6 +394,81 @@ func (h *Handler) DeleteItemHandler(responseWriter http.ResponseWriter, request 
 
 func (h *Handler) UpdateWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	// for the users that created the wishlist
+	wishlistID := chi.URLParam(request, "wishlist_id")
+
+	if wishlistID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("wishlist id is required"), http.StatusBadRequest, "wishlist id is required", nil))
+		return
+	}
+
+	itemID := chi.URLParam(request, "item_id")
+
+	if itemID == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("item id is required"), http.StatusBadRequest, "item id is required", nil))
+		return
+	}
+
+	body, problems, err := helpers.DecodeAndValidate[*UpdateItem](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	userID := request.Context().Value("user_id")
+
+	if userID == nil || userID == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	newWishlistID, err := strconv.Atoi(wishlistID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newItemID, err := strconv.Atoi(itemID)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	newUserID := userID.(int)
+
+	wishlist, err := h.Store.GetWishlistByID(newWishlistID, newUserID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if wishlist.UserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	data, err := h.Store.UpdateItem(newWishlistID, newItemID, body)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Item updated successfully",
+		Data:    data,
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
 func (h *Handler) PickWishlistItemHandler(responseWriter http.ResponseWriter, request *http.Request) {

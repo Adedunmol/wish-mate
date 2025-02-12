@@ -227,9 +227,39 @@ func (s *StubWishlistStore) GetItem(wishlistID, itemID int) (wishlist.ItemRespon
 	return wishlist.ItemResponse{}, helpers.ErrNotFound
 }
 
-func (s *StubWishlistStore) UpdateItem(wishlistID, itemID int, body wishlist.Item) (wishlist.ItemResponse, error) {
+func (s *StubWishlistStore) UpdateItem(wishlistID, itemID int, body *wishlist.UpdateItem) (wishlist.ItemResponse, error) {
 
-	return wishlist.ItemResponse{}, nil
+	var wish wishlist.WishlistResponse
+
+	for i, w := range s.wishlists {
+
+		if w.ID == wishlistID {
+
+			wish = s.wishlists[i]
+		}
+	}
+
+	for idx, i := range wish.Items {
+
+		if i.ID == itemID {
+
+			if body.Name != "" {
+				wish.Items[idx].Name = body.Name
+			}
+
+			if body.Description != "" {
+				wish.Items[idx].Description = body.Description
+			}
+
+			if body.Link != "" {
+				wish.Items[idx].Link = body.Link
+			}
+
+			return wish.Items[idx], nil
+		}
+	}
+
+	return wishlist.ItemResponse{}, helpers.ErrNotFound
 }
 
 func (s *StubWishlistStore) DeleteItem(wishlistID, itemID int) error {
@@ -1027,9 +1057,9 @@ func TestUpdateItem(t *testing.T) {
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
 	t.Run("update and return item", func(t *testing.T) {
-		data := []byte(`{ "name": "Birthday list 2" }`)
+		data := []byte(`{ "link": "https://random.com/item" }`)
 
-		request := updateWishlistRequest(user1.ID, 1, data)
+		request := updateItemRequest(user1.ID, 1, 1, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlistItemHandler(response, request)
@@ -1037,13 +1067,26 @@ func TestUpdateItem(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Item updated successfully",
+			"data": map[string]interface{}{
+				"id":          float64(1),
+				"name":        "phone",
+				"description": "",
+				"link":        "https://random.com/item",
+				"taken":       true,
+			},
+		}
+
 		assertResponseCode(t, response.Code, http.StatusOK)
+		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 404 for no item found with id", func(t *testing.T) {
-		data := []byte(`{ "name": "Birthday list 2" }`)
+		data := []byte(`{ "link": "https://random.com/item" }`)
 
-		request := updateWishlistRequest(user1.ID, 10, data)
+		request := updateItemRequest(user1.ID, 1, 10, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlistItemHandler(response, request)
@@ -1051,14 +1094,18 @@ func TestUpdateItem(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
+		want := map[string]interface{}{
+			"message": "resource not found",
+		}
+
 		assertResponseCode(t, response.Code, http.StatusNotFound)
+		assertResponseBody(t, got, want)
 	})
 
 	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+		data := []byte(`{ "link": "https://random.com/item" }`)
 
-		data := []byte(`{ "name": "Birthday list 2" }`)
-
-		request := updateWishlistRequest(user1.ID, 1, data)
+		request := updateItemRequest(user2.ID, 1, 1, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateWishlistItemHandler(response, request)
@@ -1066,7 +1113,12 @@ func TestUpdateItem(t *testing.T) {
 		var got map[string]interface{}
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
+		want := map[string]interface{}{
+			"message": "forbidden from accessing the resource",
+		}
+
 		assertResponseCode(t, response.Code, http.StatusForbidden)
+		assertResponseBody(t, got, want)
 	})
 }
 
@@ -1410,6 +1462,20 @@ func updateWishlistRequest(userID, wishlistID int, body []byte) *http.Request {
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", fmt.Sprint(wishlistID))
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+	return request
+}
+
+func updateItemRequest(userID, wishlistID, itemID int, body []byte) *http.Request {
+
+	ctx := context.WithValue(context.Background(), "user_id", userID)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/wishlists/%s/items/%s", fmt.Sprint(wishlistID), fmt.Sprint(itemID)), bytes.NewReader(body))
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("wishlist_id", fmt.Sprint(wishlistID))
+	rctx.URLParams.Add("item_id", fmt.Sprint(itemID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 

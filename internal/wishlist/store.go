@@ -11,7 +11,7 @@ type Store interface {
 	UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error)
 	DeleteWishlistByID(wishlistID, userID int) error
 	GetItem(wishlistID, itemID int) (ItemResponse, error)
-	UpdateItem(wishlistID, itemID int, body Item) (ItemResponse, error)
+	UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error)
 	PickItem(wishlistID, itemID, userID int) (ItemResponse, error)
 	DeleteItem(wishlistID, itemID int) error
 }
@@ -51,7 +51,7 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 	return ItemResponse{}, nil
 }
 
-func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body Item) (ItemResponse, error) {
+func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error) {
 	return ItemResponse{}, nil
 }
 
