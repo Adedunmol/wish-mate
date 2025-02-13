@@ -10,8 +10,18 @@ import (
 	"time"
 )
 
+type CreateTaskBody struct {
+	Name      string     `json:"name"`
+	ID        int        `json:"id"`
+	UserID    int        `json:"user_id"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	Type      string     `json:"type"`
+	ExecuteAt *time.Time `json:"execute_at"`
+}
+
 type Store interface {
-	CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error)
+	CreateTask(body CreateTaskBody) (ScheduledTaskResponse, error)
 	GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error)
 	UpdateTask(ID int) error
 	DeleteTask(ID int) error
@@ -26,7 +36,7 @@ func (t *TaskStore) DeleteTask(ID int) error {
 	panic("implement me")
 }
 
-func (t *TaskStore) CreateTask(name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error) {
+func (t *TaskStore) CreateTask(body CreateTaskBody) (ScheduledTaskResponse, error) {
 	return ScheduledTaskResponse{}, nil
 }
 
@@ -47,21 +57,21 @@ type ScheduledTaskResponse struct {
 	ExecuteAt time.Time       `json:"execute_at"`
 }
 
-func CreateTask(store Store, name string, payload json.RawMessage, executeAt *time.Time) (ScheduledTaskResponse, error) {
+func CreateTask(store Store, body CreateTaskBody) (ScheduledTaskResponse, error) {
 
-	if name == "" {
+	if body.Name == "" {
 		return ScheduledTaskResponse{}, errors.New("empty name")
 	}
 
-	if executeAt == nil {
+	if body.ExecuteAt == nil {
 		return ScheduledTaskResponse{}, errors.New("executeAt is empty")
 	}
+	//
+	//if body.Payload == nil {
+	//	return ScheduledTaskResponse{}, errors.New("payload is empty")
+	//}
 
-	if payload == nil {
-		return ScheduledTaskResponse{}, errors.New("payload is empty")
-	}
-
-	task, err := store.CreateTask(name, payload, executeAt)
+	task, err := store.CreateTask(body)
 	if err != nil {
 		return ScheduledTaskResponse{}, fmt.Errorf("error creating a task: %v", err)
 	}
@@ -86,9 +96,16 @@ func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) erro
 	}
 
 	for _, task := range tasks {
+
 		err = q.Enqueue(&queue.TaskPayload{
-			Type:    queue.TypeEmailDelivery,
-			Payload: map[string]interface{}{},
+			Type: queue.TypeNotificationDelivery,
+			Payload: map[string]interface{}{
+				"id":      "",
+				"user_id": "",
+				"title":   "",
+				"body":    "",
+				"type":    "",
+			},
 		})
 		if err != nil {
 			log.Printf("error enqueuing scheduled task: %s : %v", err, task)

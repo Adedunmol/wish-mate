@@ -95,7 +95,11 @@ func (s *UserStore) FindUserByID(id int) (User, error) {
 
 	var user User
 
-	row := tx.QueryRow(ctx, "SELECT id, username, email, first_name, last_name, password, date_of_birth FROM users WHERE id = $1;", id)
+	row := tx.QueryRow(
+		ctx,
+		"SELECT id, username, email, first_name, last_name, password, date_of_birth FROM users WHERE id = $1;",
+		id,
+	)
 
 	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.DateOfBirth)
 

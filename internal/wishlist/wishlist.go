@@ -77,6 +77,22 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
+	// create a task in the scheduled_tasks table
+	//taskBody := scheduled_tasks.CreateTaskBody{
+	//	Name:      "notification",
+	//	UserID:    userData.ID,
+	//	Title:     "Wishlist",
+	//	Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
+	//	Type:      "normal",
+	//	ExecuteAt: &scheduledDate,
+	//}
+	//
+	//_, err = h.TaskStore.CreateTask(taskBody)
+	//if err != nil {
+	//	helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+	//	return
+	//}
+
 	response := Response{
 		Status:  "Success",
 		Message: "Wishlist created successfully",

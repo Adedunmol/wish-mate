@@ -29,16 +29,6 @@ func (e *NotificationDeliveryPayload) NewTask() (*asynq.Task, error) {
 	return asynq.NewTask(TypeNotificationDelivery, payload), nil
 }
 
-func HandleNotificationTask(ctx context.Context, t *asynq.Task) error {
-	var payload NotificationDeliveryPayload
-	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-		return fmt.Errorf("error decoding notification delivery payload: %w", err)
-	}
-	log.Printf("creating notification %d for: %d", payload.ID, payload.UserID)
-
-	return nil
-}
-
 func WrapHandler(store notification.Store) func(ctx context.Context, t *asynq.Task) error {
 	return func(ctx context.Context, t *asynq.Task) error {
 
@@ -58,6 +48,8 @@ func WrapHandler(store notification.Store) func(ctx context.Context, t *asynq.Ta
 		if err != nil {
 			return fmt.Errorf("error creating notification: %w", err)
 		}
+
+		// send mail
 
 		return nil
 	}
