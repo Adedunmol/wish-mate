@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Your Email - Wishmate</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; text-align: center;">
+<div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);">
+    <h1 style="color: #ff6600;">🔐 Verify Your Email</h1>
+    <p>Hey <strong>{{ .Username }}</strong>!</p>
+    <p>Welcome to <strong>Wishmate</strong>! Before you get started, we need to make sure it’s really you. Use the verification code below to verify your email address:</p>
+    <h2 style="font-size: 24px; color: #333; background: #f0f0f0; padding: 10px; display: inline-block; border-radius: 5px;">{{ .Code }}</h2>
+    <p>Just enter this code in the app to complete your sign-up. This code expires in <strong>{{ .Expiration }}</strong> minutes, so don’t wait too long!</p>
+    <p>If you didn’t request this, you can safely ignore this email.</p>
+    <p>See you inside! 🚀</p>
+    <p><strong>The Wishmate Team</strong></p>
+</div>
+</body>
+</html>
