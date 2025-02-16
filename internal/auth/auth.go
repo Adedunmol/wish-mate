@@ -136,3 +136,16 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
+
+func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) ResetPasswordRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
+}
+
+func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {}
