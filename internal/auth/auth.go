@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Response struct {
@@ -66,13 +67,24 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		Data:    data,
 	}
 
+	code, err := helpers.GenerateSecureOTP(6)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
 	err = h.Queue.Enqueue(&queue.TaskPayload{
 		Type: queue.TypeEmailDelivery,
 		Payload: map[string]interface{}{
 			"email":    body.Email,
-			"template": "register",
-			"subject":  "register",
-			"data":     map[string]interface{}{},
+			"template": "verification_mail",
+			"subject":  "Verify your email",
+			"data": map[string]interface{}{
+				"username":   body.Username,
+				"code":       code,
+				"expiration": 30 * time.Minute,
+			},
 		},
 	})
 

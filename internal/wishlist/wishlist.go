@@ -135,6 +135,7 @@ func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
+	// add verbose boolean to indicate getting the username and name of the friends who picked an item
 	wishlists, err := h.Store.GetUserWishlists(newUserID, newCurrentUserID == newUserID)
 
 	if err != nil {
@@ -174,8 +175,9 @@ func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.
 
 	newUserID := userID.(int)
 
-	// should be verbose (include the details of those who picked an item) if due date >= current date
-	// should not include items that have been picked for other users but should include for the creator
+	// add verbose boolean to indicate getting the username and name of the friends who picked an item.
+	// should be verbose (include the details of those who picked an item) if due date >= current date.
+	// should not include items that have been picked for other users but should include for the creator.
 	wishlist, err := h.Store.GetWishlistByID(wishlistID, newUserID)
 
 	if err != nil {
@@ -329,6 +331,7 @@ func (h *Handler) GetItemHandler(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
+	// add verbose boolean to indicate getting the username and name of the friends who picked an item
 	data, err := h.Store.GetItem(newWishlistID, newItemID)
 
 	if err != nil {
