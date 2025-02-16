@@ -28,8 +28,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		if !data["verified"].(bool) {
+			helpers.HandleError(responseWriter, helpers.ErrForbidden)
+			return
+		}
+
 		ctx := context.WithValue(request.Context(), "email", data["email"])
 		ctx = context.WithValue(ctx, "user_id", data["user_id"])
+		ctx = context.WithValue(ctx, "verified", data["verified"])
 
 		newRequest := request.WithContext(ctx)
 		next.ServeHTTP(responseWriter, newRequest)

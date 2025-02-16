@@ -111,7 +111,7 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 		return
 	}
 
-	token, err := helpers.GenerateToken(data.ID, data.Email)
+	token, err := helpers.GenerateToken(data.ID, data.Email, data.Verified)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return

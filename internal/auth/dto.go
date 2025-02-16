@@ -10,6 +10,7 @@ type User struct {
 	Email       string
 	Password    string
 	DateOfBirth string
+	Verified    bool
 }
 
 type CreateUserBody struct {
