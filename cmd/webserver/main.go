@@ -5,8 +5,8 @@ import (
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/queue"
+	"github.com/Adedunmol/wish-mate/internal/reminder"
 	"github.com/Adedunmol/wish-mate/internal/routes"
-	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
@@ -59,7 +59,7 @@ func handlePanics() {
 
 func checkScheduledJobs(client *queue.Client, db *pgx.Conn) {
 
-	taskStore := &scheduled_tasks.TaskStore{DB: db}
+	taskStore := &reminder.TaskStore{DB: db}
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
@@ -67,7 +67,7 @@ func checkScheduledJobs(client *queue.Client, db *pgx.Conn) {
 		// check db for jobs where scheduled = false AND scheduled_at <= now
 		log.Printf("checking due scheduled jobs at: %v", t.UTC())
 
-		if err := scheduled_tasks.GetTasksAndEnqueue(taskStore, client, &t); err != nil {
+		if err := reminder.GetTasksAndEnqueue(taskStore, client, &t); err != nil {
 			log.Printf(errors.Unwrap(err).Error())
 		}
 

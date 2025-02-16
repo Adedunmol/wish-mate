@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
-	"github.com/Adedunmol/wish-mate/internal/scheduled_tasks"
+	"github.com/Adedunmol/wish-mate/internal/reminder"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -19,7 +19,7 @@ type Response struct {
 type Handler struct {
 	Store     Store
 	UserStore auth.Store
-	TaskStore scheduled_tasks.TaskStore
+	TaskStore reminder.TaskStore
 }
 
 func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
@@ -77,8 +77,8 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
-	// create a task in the scheduled_tasks table
-	//taskBody := scheduled_tasks.CreateTaskBody{
+	// create a task in the reminder table
+	//taskBody := reminder.CreateTaskBody{
 	//	Name:      "notification",
 	//	UserID:    userData.ID,
 	//	Title:     "Wishlist",

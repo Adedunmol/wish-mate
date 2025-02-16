@@ -1,7 +1,6 @@
-package scheduled_tasks
+package reminder
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/queue"
@@ -10,9 +9,8 @@ import (
 	"time"
 )
 
-type CreateTaskBody struct {
+type CreateReminderBody struct {
 	Name      string     `json:"name"`
-	ID        int        `json:"id"`
 	UserID    int        `json:"user_id"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
@@ -21,66 +19,68 @@ type CreateTaskBody struct {
 }
 
 type Store interface {
-	CreateTask(body CreateTaskBody) (ScheduledTaskResponse, error)
-	GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error)
-	UpdateTask(ID int) error
-	DeleteTask(ID int) error
+	CreateReminder(body CreateReminderBody) (ReminderResponse, error)
+	GetReminders(currentTime *time.Time) ([]ReminderResponse, error)
+	UpdateReminder(ID int) error
+	DeleteReminder(ID int) error
 }
 
-type TaskStore struct {
+type ReminderStore struct {
 	DB *pgx.Conn
 }
 
-func (t *TaskStore) DeleteTask(ID int) error {
+func (t *ReminderStore) DeleteReminder(ID int) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t *TaskStore) CreateTask(body CreateTaskBody) (ScheduledTaskResponse, error) {
-	return ScheduledTaskResponse{}, nil
+func (t *ReminderStore) CreateReminder(body CreateReminderBody) (ReminderResponse, error) {
+	return ReminderResponse{}, nil
 }
 
-func (t *TaskStore) GetTasks(currentTime *time.Time) ([]ScheduledTaskResponse, error) {
+func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse, error) {
 
 	return nil, nil
 }
 
-func (t *TaskStore) UpdateTask(ID int) error {
+func (t *ReminderStore) UpdateReminder(ID int) error {
 	return nil
 }
 
-type ScheduledTaskResponse struct {
-	ID        int             `json:"id"`
-	TaskName  string          `json:"task_name"`
-	Payload   json.RawMessage `json:"payload"`
-	Status    string          `json:"status"`
-	ExecuteAt time.Time       `json:"execute_at"`
+type ReminderResponse struct {
+	ID        int        `json:"id"`
+	UserID    int        `json:"user_id"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	Type      string     `json:"type"`
+	Status    string     `json:"status"`
+	ExecuteAt *time.Time `json:"execute_at"`
 }
 
-func CreateTask(store Store, body CreateTaskBody) (ScheduledTaskResponse, error) {
+func CreateReminder(store Store, body CreateReminderBody) (ReminderResponse, error) {
 
 	if body.Name == "" {
-		return ScheduledTaskResponse{}, errors.New("empty name")
+		return ReminderResponse{}, errors.New("empty name")
 	}
 
 	if body.ExecuteAt == nil {
-		return ScheduledTaskResponse{}, errors.New("executeAt is empty")
+		return ReminderResponse{}, errors.New("executeAt is empty")
 	}
 	//
 	//if body.Payload == nil {
 	//	return ScheduledTaskResponse{}, errors.New("payload is empty")
 	//}
 
-	task, err := store.CreateTask(body)
+	task, err := store.CreateReminder(body)
 	if err != nil {
-		return ScheduledTaskResponse{}, fmt.Errorf("error creating a task: %v", err)
+		return ReminderResponse{}, fmt.Errorf("error creating a task: %v", err)
 	}
 
 	return task, nil
 }
 
-func GetTasks(store Store, currentTime *time.Time) ([]ScheduledTaskResponse, error) {
-	tasks, err := store.GetTasks(currentTime)
+func GetTasks(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
+	tasks, err := store.GetReminders(currentTime)
 	if err != nil {
 		return nil, fmt.Errorf("error getting tasks: %v", err)
 	}
@@ -111,7 +111,7 @@ func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) erro
 			log.Printf("error enqueuing scheduled task: %s : %v", err, task)
 		}
 
-		err = store.UpdateTask(task.ID)
+		err = store.UpdateReminder(task.ID)
 
 		if err != nil {
 			return fmt.Errorf("error updating task: %v", err)
@@ -122,7 +122,7 @@ func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) erro
 }
 
 func DeleteTask(store Store, id int) error {
-	err := store.DeleteTask(id)
+	err := store.DeleteReminder(id)
 
 	if err != nil {
 		return fmt.Errorf("error deleting task: %v", err)
