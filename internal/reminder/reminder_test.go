@@ -70,7 +70,7 @@ func (s *StubStore) DeleteReminder(id int) error {
 	return helpers.ErrNotFound
 }
 
-func TestCreateTask(t *testing.T) {
+func TestCreateReminder(t *testing.T) {
 	store := &StubStore{reminders: make([]reminder.ReminderResponse, 0)}
 
 	t.Run("create and return task", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestCreateTask(t *testing.T) {
 
 }
 
-func TestGetTasks(t *testing.T) {
+func TestGetReminders(t *testing.T) {
 
 	t.Run("return tasks that are before the current time (with pending status)", func(t *testing.T) {
 		futureTime := time.Now().Add(10 * time.Minute)
@@ -137,7 +137,7 @@ func TestGetTasks(t *testing.T) {
 		}}
 
 		currentTime := time.Now()
-		tasks, _ := reminder.GetTasks(store, &currentTime)
+		tasks, _ := reminder.GetReminders(store, &currentTime)
 
 		if len(tasks) != 2 {
 			t.Error("tasks should have two tasks")
@@ -155,7 +155,7 @@ func TestGetTasks(t *testing.T) {
 		}}
 
 		currentTime := time.Now()
-		tasks, _ := reminder.GetTasks(store, &currentTime)
+		tasks, _ := reminder.GetReminders(store, &currentTime)
 
 		if len(tasks) != 0 {
 			t.Error("tasks should have no tasks")
@@ -163,7 +163,7 @@ func TestGetTasks(t *testing.T) {
 	})
 }
 
-func DeleteTask(t *testing.T) {
+func DeleteReminder(t *testing.T) {
 	futureTime := time.Now().Add(10 * time.Minute)
 	pastTime := time.Now().Add(-(1 * time.Minute))
 
@@ -175,7 +175,7 @@ func DeleteTask(t *testing.T) {
 
 	t.Run("delete a task", func(t *testing.T) {
 
-		err := reminder.DeleteTask(store, 1)
+		err := reminder.DeleteReminder(store, 1)
 		if err != nil {
 			t.Error("error should be nil")
 		}
@@ -187,7 +187,7 @@ func DeleteTask(t *testing.T) {
 
 	t.Run("return error for no task found with id", func(t *testing.T) {
 
-		err := reminder.DeleteTask(store, 10)
+		err := reminder.DeleteReminder(store, 10)
 
 		if err == nil {
 			t.Error("error should not be nil for no task found with id")

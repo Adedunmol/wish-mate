@@ -79,7 +79,7 @@ func CreateReminder(store Store, body CreateReminderBody) (ReminderResponse, err
 	return task, nil
 }
 
-func GetTasks(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
+func GetReminders(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
 	tasks, err := store.GetReminders(currentTime)
 	if err != nil {
 		return nil, fmt.Errorf("error getting tasks: %v", err)
@@ -88,9 +88,9 @@ func GetTasks(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
 	return tasks, nil
 }
 
-func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) error {
+func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error {
 
-	tasks, err := GetTasks(store, currentTime)
+	tasks, err := GetReminders(store, currentTime)
 	if err != nil {
 		return fmt.Errorf("error getting tasks: %v", err)
 	}
@@ -121,7 +121,7 @@ func GetTasksAndEnqueue(store Store, q queue.Queue, currentTime *time.Time) erro
 	return nil
 }
 
-func DeleteTask(store Store, id int) error {
+func DeleteReminder(store Store, id int) error {
 	err := store.DeleteReminder(id)
 
 	if err != nil {

@@ -17,9 +17,9 @@ type Response struct {
 }
 
 type Handler struct {
-	Store     Store
-	UserStore auth.Store
-	TaskStore reminder.TaskStore
+	Store         Store
+	UserStore     auth.Store
+	ReminderStore reminder.ReminderStore
 }
 
 func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *http.Request) {
@@ -287,7 +287,7 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	// delete scheduled job for the wishlist
-	//err = h.TaskStore.DeleteTask(wishlistID)
+	//err = h.TaskStore.DeleteReminder(wishlistID)
 	//
 	//if err != nil {
 	//	helpers.HandleError(responseWriter, err)

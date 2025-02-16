@@ -59,15 +59,15 @@ func handlePanics() {
 
 func checkScheduledJobs(client *queue.Client, db *pgx.Conn) {
 
-	taskStore := &reminder.TaskStore{DB: db}
+	taskStore := &reminder.ReminderStore{DB: db}
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for t := range ticker.C {
-		// check db for jobs where scheduled = false AND scheduled_at <= now
-		log.Printf("checking due scheduled jobs at: %v", t.UTC())
+		// check db for reminders where scheduled = pending AND scheduled_at <= now
+		log.Printf("checking due scheduled reminders at: %v", t.UTC())
 
-		if err := reminder.GetTasksAndEnqueue(taskStore, client, &t); err != nil {
+		if err := reminder.EnqueueReminders(taskStore, client, &t); err != nil {
 			log.Printf(errors.Unwrap(err).Error())
 		}
 
