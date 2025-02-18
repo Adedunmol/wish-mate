@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+type OTPStore interface {
+	CreateOTP(email string, code string, expiration int) error
+	GetOTP(email string) (OTP, error)
+	DeleteOTP(email string) error
+}
+
 type Store interface {
 	CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 	FindUserByEmail(email string) (User, error)

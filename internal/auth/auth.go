@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"golang.org/x/crypto/bcrypt"
@@ -17,9 +18,12 @@ type Response struct {
 }
 
 type Handler struct {
-	Store Store
-	Queue queue.Queue
+	Store    Store
+	Queue    queue.Queue
+	OTPStore OTPStore
 }
+
+const OtpExpiration = 10
 
 func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
@@ -68,6 +72,20 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 	}
 
 	code, err := helpers.GenerateSecureOTP(6)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	hashedCode, err := bcrypt.GenerateFromPassword([]byte(code), 10)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	err = h.OTPStore.CreateOTP(body.Email, fmt.Sprint(hashedCode), OtpExpiration)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)

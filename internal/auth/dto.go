@@ -34,3 +34,11 @@ type CreateUserResponse struct {
 	LastName  string `json:"last_name"`
 	Username  string `json:"username"`
 }
+
+type OTP struct {
+	ID        int    `json:"id"`
+	Email     string `json:"email"`
+	OTP       string `json:"otp"`
+	ExpiresAt string `json:"expires_at"`
+	CreatedAt string `json:"created_at"`
+}
