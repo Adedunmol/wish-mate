@@ -1,6 +1,9 @@
 package auth
 
-import "github.com/Adedunmol/wish-mate/internal/helpers"
+import (
+	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"time"
+)
 
 type User struct {
 	ID          int
@@ -36,9 +39,19 @@ type CreateUserResponse struct {
 }
 
 type OTP struct {
-	ID        int    `json:"id"`
-	Email     string `json:"email"`
-	OTP       string `json:"otp"`
-	ExpiresAt string `json:"expires_at"`
-	CreatedAt string `json:"created_at"`
+	ID        int        `json:"id"`
+	Email     string     `json:"email"`
+	OTP       string     `json:"otp"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	CreatedAt *time.Time `json:"created_at"`
+}
+
+type UpdateUserBody struct {
+	Verified bool `json:"verified"`
+}
+
+type VerifyOTPBody struct {
+	helpers.Validation
+	Email string `json:"email" validate:"required,email"`
+	Code  string `json:"code" validate:"required"`
 }

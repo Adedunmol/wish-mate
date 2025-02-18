@@ -10,7 +10,7 @@ import (
 
 type OTPStore interface {
 	CreateOTP(email string, code string, expiration int) error
-	GetOTP(email string) (OTP, error)
+	ValidateOTP(email string, otp string) (bool, error)
 	DeleteOTP(email string) error
 }
 
@@ -18,6 +18,7 @@ type Store interface {
 	CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 	FindUserByEmail(email string) (User, error)
 	FindUserByID(id int) (User, error)
+	UpdateUser(id int, data UpdateUserBody) (User, error)
 	ComparePasswords(storedPassword, candidatePassword string) bool
 }
 
@@ -119,6 +120,18 @@ func (s *UserStore) FindUserByID(id int) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return User{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	return User{}, err
 }
 
 func (s *UserStore) ComparePasswords(storedPassword, candidatePassword string) bool {

@@ -155,11 +155,62 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
+func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	body, problems, err := helpers.DecodeAndValidate[*VerifyOTPBody](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	log.Print(body)
+
+	user, err := h.Store.FindUserByEmail(body.Email)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
+	isValid, err := h.OTPStore.ValidateOTP(body.Email, body.Code)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if !isValid {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
+	updateBody := UpdateUserBody{
+		Verified: true,
+	}
+
+	_, err = h.Store.UpdateUser(user.ID, updateBody)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "User verified successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
+
 func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
 func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
-
-func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
 func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
