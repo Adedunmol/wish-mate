@@ -55,3 +55,8 @@ type VerifyOTPBody struct {
 	Email string `json:"email" validate:"required,email"`
 	Code  string `json:"code" validate:"required"`
 }
+
+type RequestOTPBody struct {
+	helpers.Validation
+	Email string `json:"email" validate:"required,email"`
+}

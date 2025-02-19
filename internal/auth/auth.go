@@ -23,7 +23,7 @@ type Handler struct {
 	OTPStore OTPStore
 }
 
-const OtpExpiration = 10
+const OtpExpiration = 30
 
 func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
@@ -171,8 +171,6 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	log.Print(body)
-
 	user, err := h.Store.FindUserByEmail(body.Email)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
@@ -208,11 +206,78 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
-
 func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
-func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	body, problems, err := helpers.DecodeAndValidate[*RequestOTPBody](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	user, err := h.Store.FindUserByEmail(body.Email)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
+	code, err := helpers.GenerateSecureOTP(6)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	hashedCode, err := bcrypt.GenerateFromPassword([]byte(code), 10)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	err = h.OTPStore.CreateOTP(user.Email, fmt.Sprint(hashedCode), OtpExpiration)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	err = h.Queue.Enqueue(&queue.TaskPayload{
+		Type: queue.TypeEmailDelivery,
+		Payload: map[string]interface{}{
+			"email":    body.Email,
+			"template": "verification_mail",
+			"subject":  "Verify your email",
+			"data": map[string]interface{}{
+				"username":   user.Username,
+				"code":       code,
+				"expiration": 30 * time.Minute,
+			},
+		},
+	})
+
+	if err != nil {
+		log.Printf("error enqueuing email task: %s", err)
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Code has been sent successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
 
 func (h *Handler) ResetPasswordRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
 }

@@ -458,6 +458,54 @@ func TestVerifyOTP(t *testing.T) {
 	})
 }
 
+func TestRequestOTP(t *testing.T) {
+	currentTime := time.Now()
+	futureTime := time.Now().Add(10 * time.Minute)
+
+	store := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+	}}
+	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
+	otpStore := StubOtpStore{
+		otps: []auth.OTP{
+			{ID: 1, Email: "adedunmola@gmail.com", OTP: "123456", ExpiresAt: &futureTime, CreatedAt: &currentTime},
+		},
+	}
+	server := &auth.Handler{Store: &store, OTPStore: &otpStore, Queue: &mockQueue}
+
+	t.Run("send otp to user", func(t *testing.T) {
+		data := []byte(`{ "email": "adedunmola@gmail.com" }`)
+
+		request := verifyOTPRequest(data)
+		response := httptest.NewRecorder()
+
+		server.RequestCodeHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("no user found with email", func(t *testing.T) {
+		data := []byte(`{ "email": "ade@gmail.com" }`)
+
+		request := verifyOTPRequest(data)
+		response := httptest.NewRecorder()
+
+		server.RequestCodeHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+	})
+
+	t.Run("invalid body", func(t *testing.T) {
+		data := []byte(`{}`)
+		request := verifyOTPRequest(data)
+		response := httptest.NewRecorder()
+
+		server.RequestCodeHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+	})
+}
+
 func createUserRequest(data []byte) *http.Request {
 
 	request, _ := http.NewRequest("POST", "/api/v1/users/register", bytes.NewReader(data))
