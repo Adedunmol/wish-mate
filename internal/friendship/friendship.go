@@ -1,4 +1,4 @@
-package user
+package friendship
 
 import (
 	"errors"
@@ -42,7 +42,7 @@ func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request
 	userID := chi.URLParam(request, "user_id")
 
 	if userID == "" {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("user id is required"), http.StatusBadRequest, "id is required", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("friendship id is required"), http.StatusBadRequest, "id is required", nil))
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *Handler) GetAllRequestsHandler(responseWriter http.ResponseWriter, requ
 	userID := chi.URLParam(request, "user_id")
 
 	if userID == "" {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("user id is required"), http.StatusBadRequest, "id is required", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("friendship id is required"), http.StatusBadRequest, "id is required", nil))
 		return
 	}
 
@@ -182,7 +182,7 @@ func (h *Handler) GetRequestHandler(responseWriter http.ResponseWriter, request 
 	userID := chi.URLParam(request, "user_id")
 
 	if userID == "" {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("user id is required"), http.StatusBadRequest, "id is required", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("friendship id is required"), http.StatusBadRequest, "id is required", nil))
 		return
 	}
 

@@ -398,7 +398,7 @@ func TestCreateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("create and return a wishlist (without date uses the user's birthday)", func(t *testing.T) {
+	t.Run("create and return a wishlist (without date uses the friendship's birthday)", func(t *testing.T) {
 
 		data := map[string]interface{}{
 			"name":          "Birthday list",
@@ -479,7 +479,7 @@ func TestCreateWishlist(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return error if no user is found with the email attached", func(t *testing.T) {
+	t.Run("return error if no friendship is found with the email attached", func(t *testing.T) {
 
 		data := map[string]interface{}{
 			"name":          "Birthday list",
@@ -561,7 +561,7 @@ func TestGetUserWishlists(t *testing.T) {
 	}}
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 
-	t.Run("get user's wishlists (owner)", func(t *testing.T) {
+	t.Run("get friendship's wishlists (owner)", func(t *testing.T) {
 
 		request := getUserWishlistsRequest(user1.ID)
 		response := httptest.NewRecorder()
@@ -609,7 +609,7 @@ func TestGetUserWishlists(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("get user's wishlists (others)", func(t *testing.T) {
+	t.Run("get friendship's wishlists (others)", func(t *testing.T) {
 
 		ctx := context.WithValue(context.Background(), "user_id", user2.ID)
 		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("users/%s/wishlists", fmt.Sprint(user1.ID)), nil)
@@ -662,7 +662,7 @@ func TestGetUserWishlists(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 404 for no user with the id", func(t *testing.T) {
+	t.Run("return 404 for no friendship with the id", func(t *testing.T) {
 
 		request := getUserWishlistsRequest(3)
 		response := httptest.NewRecorder()
@@ -673,7 +673,7 @@ func TestGetUserWishlists(t *testing.T) {
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		wantBody := map[string]interface{}{
-			"message": "no user found with the id",
+			"message": "no friendship found with the id",
 		}
 
 		wantJSON, _ := json.Marshal(wantBody)
@@ -1102,7 +1102,7 @@ func TestUpdateItem(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's resource", func(t *testing.T) {
 		data := []byte(`{ "link": "https://random.com/item" }`)
 
 		request := updateItemRequest(user2.ID, 1, 1, data)
@@ -1321,7 +1321,7 @@ func TestDeleteItem(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return a 403 for accessing another user's item", func(t *testing.T) {
+	t.Run("return a 403 for accessing another friendship's item", func(t *testing.T) {
 		request := deleteItemRequest(user2.ID, 1, 1)
 		response := httptest.NewRecorder()
 

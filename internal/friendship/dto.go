@@ -1,4 +1,4 @@
-package user
+package friendship
 
 import (
 	"github.com/Adedunmol/wish-mate/internal/helpers"

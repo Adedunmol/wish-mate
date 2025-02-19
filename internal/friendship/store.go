@@ -1,4 +1,4 @@
-package user
+package friendship
 
 import "github.com/jackc/pgx/v5"
 

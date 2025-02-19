@@ -21,7 +21,7 @@ type Handler struct {
 
 func (h *Handler) CreateNotification(body *CreateNotificationBody) (Notification, error) {
 	if body.UserID == 0 {
-		return Notification{}, errors.New("user id is required")
+		return Notification{}, errors.New("friendship id is required")
 	}
 
 	if body.Body == "" {
@@ -92,7 +92,7 @@ func (h *Handler) GetUserNotificationsHandler(responseWriter http.ResponseWriter
 	userID := chi.URLParam(request, "user_id")
 
 	if userID == "" {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "user id is required", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "friendship id is required", nil))
 		return
 	}
 

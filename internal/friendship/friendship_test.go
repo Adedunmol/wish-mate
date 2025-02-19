@@ -1,4 +1,4 @@
-package user_test
+package friendship_test
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
+	"github.com/Adedunmol/wish-mate/internal/friendship"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/queue"
-	"github.com/Adedunmol/wish-mate/internal/user"
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
@@ -70,12 +70,12 @@ func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword strin
 }
 
 type StubFriendStore struct {
-	friends []user.FriendshipResponse
+	friends []friendship.FriendshipResponse
 }
 
-func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (user.FriendshipResponse, error) {
+func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (friendship.FriendshipResponse, error) {
 
-	data := user.FriendshipResponse{
+	data := friendship.FriendshipResponse{
 		ID:       1,
 		UserID:   userID,
 		FriendID: recipientID,
@@ -87,7 +87,7 @@ func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (user.Friend
 	return data, nil
 }
 
-func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (user.FriendshipResponse, error) {
+func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (friendship.FriendshipResponse, error) {
 
 	for i, u := range s.friends {
 		if u.ID == friendshipID {
@@ -95,11 +95,11 @@ func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (use
 			return s.friends[i], nil
 		}
 	}
-	return user.FriendshipResponse{}, helpers.ErrNotFound
+	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
-func (s *StubFriendStore) GetAllFriendships(userID int, status string) ([]user.FriendshipResponse, error) {
-	result := make([]user.FriendshipResponse, 0)
+func (s *StubFriendStore) GetAllFriendships(userID int, status string) ([]friendship.FriendshipResponse, error) {
+	result := make([]friendship.FriendshipResponse, 0)
 
 	log.Printf("status: %s", status)
 
@@ -111,7 +111,7 @@ func (s *StubFriendStore) GetAllFriendships(userID int, status string) ([]user.F
 	return result, nil
 }
 
-func (s *StubFriendStore) GetFriendship(requestID int) (user.FriendshipResponse, error) {
+func (s *StubFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
 
 	for _, u := range s.friends {
 		if u.ID == requestID {
@@ -119,49 +119,49 @@ func (s *StubFriendStore) GetFriendship(requestID int) (user.FriendshipResponse,
 		}
 	}
 
-	return user.FriendshipResponse{}, helpers.ErrNotFound
+	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
 type NotFoundFriendStore struct {
-	friends []user.FriendshipResponse
+	friends []friendship.FriendshipResponse
 }
 
-func (s *NotFoundFriendStore) CreateFriendship(_, _ int) (user.FriendshipResponse, error) {
+func (s *NotFoundFriendStore) CreateFriendship(_, _ int) (friendship.FriendshipResponse, error) {
 
-	return user.FriendshipResponse{}, helpers.ErrNotFound
+	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
-func (s *NotFoundFriendStore) UpdateFriendship(_ int, _ string) (user.FriendshipResponse, error) {
-	return user.FriendshipResponse{}, helpers.ErrNotFound
+func (s *NotFoundFriendStore) UpdateFriendship(_ int, _ string) (friendship.FriendshipResponse, error) {
+	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
-func (s *NotFoundFriendStore) GetAllFriendships(_ int, _ string) ([]user.FriendshipResponse, error) {
+func (s *NotFoundFriendStore) GetAllFriendships(_ int, _ string) ([]friendship.FriendshipResponse, error) {
 	return nil, nil
 }
 
-func (s *NotFoundFriendStore) GetFriendship(requestID int) (user.FriendshipResponse, error) {
-	return user.FriendshipResponse{}, nil
+func (s *NotFoundFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
+	return friendship.FriendshipResponse{}, nil
 }
 
 type ConflictFriendStore struct {
-	friends []user.FriendshipResponse
+	friends []friendship.FriendshipResponse
 }
 
-func (s *ConflictFriendStore) CreateFriendship(_, _ int) (user.FriendshipResponse, error) {
+func (s *ConflictFriendStore) CreateFriendship(_, _ int) (friendship.FriendshipResponse, error) {
 
-	return user.FriendshipResponse{}, helpers.ErrConflict
+	return friendship.FriendshipResponse{}, helpers.ErrConflict
 }
 
-func (s *ConflictFriendStore) UpdateFriendship(_ int, _ string) (user.FriendshipResponse, error) {
-	return user.FriendshipResponse{}, helpers.ErrConflict
+func (s *ConflictFriendStore) UpdateFriendship(_ int, _ string) (friendship.FriendshipResponse, error) {
+	return friendship.FriendshipResponse{}, helpers.ErrConflict
 }
 
-func (s *ConflictFriendStore) GetAllFriendships(_ int, _ string) ([]user.FriendshipResponse, error) {
+func (s *ConflictFriendStore) GetAllFriendships(_ int, _ string) ([]friendship.FriendshipResponse, error) {
 	return nil, nil
 }
 
-func (s *ConflictFriendStore) GetFriendship(requestID int) (user.FriendshipResponse, error) {
-	return user.FriendshipResponse{}, nil
+func (s *ConflictFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
+	return friendship.FriendshipResponse{}, nil
 }
 
 func TestSendRequest(t *testing.T) {
@@ -169,10 +169,10 @@ func TestSendRequest(t *testing.T) {
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 	}}
-	friendStore := StubFriendStore{friends: make([]user.FriendshipResponse, 0)}
+	friendStore := StubFriendStore{friends: make([]friendship.FriendshipResponse, 0)}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+	server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 	t.Run("send a request and return the entry", func(t *testing.T) {
 
@@ -201,15 +201,15 @@ func TestSendRequest(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 404 for no user with the id", func(t *testing.T) {
+	t.Run("return 404 for no friendship with the id", func(t *testing.T) {
 		authStore := StubUserStore{users: []auth.User{
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
-		friendStore := NotFoundFriendStore{friends: make([]user.FriendshipResponse, 0)}
+		friendStore := NotFoundFriendStore{friends: make([]friendship.FriendshipResponse, 0)}
 		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+		server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 		data := []byte(fmt.Sprintf(`{ "recipient_id": %d }`, 3))
 
 		request := createSendRequest(1, data)
@@ -234,10 +234,10 @@ func TestSendRequest(t *testing.T) {
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
-		friendStore := ConflictFriendStore{friends: make([]user.FriendshipResponse, 0)}
+		friendStore := ConflictFriendStore{friends: make([]friendship.FriendshipResponse, 0)}
 		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+		server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 		data := []byte(fmt.Sprintf(`{ "recipient_id": %d }`, 3))
 
@@ -257,7 +257,7 @@ func TestSendRequest(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return bad request for empty user id", func(t *testing.T) {
+	t.Run("return bad request for empty friendship id", func(t *testing.T) {
 		data := []byte(`{}`)
 
 		request := createSendRequest(1, data)
@@ -290,12 +290,12 @@ func TestUpdateRequest(t *testing.T) {
 		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 	}}
-	friendStore := StubFriendStore{friends: []user.FriendshipResponse{
+	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
 		{ID: 1, UserID: 1, FriendID: 2, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+	server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 	t.Run("accept a request and return the entry", func(t *testing.T) {
 		data := []byte(`{ "type": "accept" }`)
@@ -328,13 +328,13 @@ func TestUpdateRequest(t *testing.T) {
 			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
-		friendStore := StubFriendStore{friends: []user.FriendshipResponse{
+		friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
 			{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
 			{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
 		}}
 		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-		server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+		server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 		data := []byte(`{ "type": "block" }`)
 
@@ -477,14 +477,14 @@ func TestGetAllFriendships(t *testing.T) {
 		{ID: 3, FirstName: "Ayo", LastName: "Wale", Password: "password", Email: "ayo@gmail.com", Username: "Ayo"},
 	}}
 
-	friendStore := StubFriendStore{friends: []user.FriendshipResponse{
+	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
 		{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
 		{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
 		{ID: 3, UserID: 1, FriendID: 3, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+	server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 	t.Run("return all friendships", func(t *testing.T) {
 
@@ -612,7 +612,7 @@ func TestGetAllFriendships(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's requests", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's requests", func(t *testing.T) {
 
 		ctx := context.WithValue(context.Background(), "user_id", 1)
 		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests?status=%s", 2, "accepted"), nil)
@@ -649,14 +649,14 @@ func TestGetFriendship(t *testing.T) {
 		{ID: 3, FirstName: "Ayo", LastName: "Wale", Password: "password", Email: "ayo@gmail.com", Username: "Ayo"},
 	}}
 
-	friendStore := StubFriendStore{friends: []user.FriendshipResponse{
+	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
 		{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
 		{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
 		{ID: 3, UserID: 1, FriendID: 3, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
-	server := &user.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
+	server := &friendship.Handler{AuthStore: &authStore, FriendStore: &friendStore, Queue: &mockQueue}
 
 	t.Run("return a friendship", func(t *testing.T) {
 
@@ -706,7 +706,7 @@ func TestGetFriendship(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's friendship", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's friendship", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), "user_id", 1)
 		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", 2, 1), nil)
 

@@ -31,7 +31,7 @@ func (s *StubStore) CreateNotification(body *notification.CreateNotificationBody
 	}
 
 	if userData.ID == 0 {
-		return notification.Notification{}, errors.New("no user with the user id")
+		return notification.Notification{}, errors.New("no friendship with the friendship id")
 	}
 
 	currentTime := time.Now()
@@ -116,7 +116,7 @@ func TestCreateNotification(t *testing.T) {
 		}
 	})
 
-	t.Run("return error for no user with the user id", func(t *testing.T) {
+	t.Run("return error for no friendship with the friendship id", func(t *testing.T) {
 		body := notification.CreateNotificationBody{
 			UserID: 10,
 			Title:  "Birthday",
@@ -130,7 +130,7 @@ func TestCreateNotification(t *testing.T) {
 			t.Errorf("CreateNotification returned no error")
 		}
 
-		if err.Error() != "error creating notification: no user with the user id" {
+		if err.Error() != "error creating notification: no friendship with the friendship id" {
 			t.Errorf("wrong error returned")
 		}
 	})
@@ -162,7 +162,7 @@ func TestCreateNotification(t *testing.T) {
 		if err == nil {
 			t.Errorf("CreateNotification returned no error")
 		}
-		if err.Error() != "user id is required" {
+		if err.Error() != "friendship id is required" {
 			t.Errorf("wrong error returned")
 		}
 	})
@@ -254,7 +254,7 @@ func TestGetNotification(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's resource", func(t *testing.T) {
 
 		request := getNotificationRequest(1, 2, false)
 		response := httptest.NewRecorder()
@@ -296,7 +296,7 @@ func TestGetUserNotifications(t *testing.T) {
 
 	server := &notification.Handler{Store: store}
 
-	t.Run("get user's notifications", func(t *testing.T) {
+	t.Run("get friendship's notifications", func(t *testing.T) {
 		request := getNotificationRequest(1, 1, true)
 		response := httptest.NewRecorder()
 
@@ -318,7 +318,7 @@ func TestGetUserNotifications(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 404 for no user with the id", func(t *testing.T) {
+	t.Run("return 404 for no friendship with the id", func(t *testing.T) {
 		request := getNotificationRequest(10, 1, true)
 		response := httptest.NewRecorder()
 
@@ -419,7 +419,7 @@ func TestUpdateNotification(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's resource", func(t *testing.T) {
 		request := updateNotificationRequest(notif1.ID, user2.ID)
 		response := httptest.NewRecorder()
 
@@ -429,7 +429,7 @@ func TestUpdateNotification(t *testing.T) {
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"message": "forbidden from accessing another user's resource",
+			"message": "forbidden from accessing another friendship's resource",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusForbidden)
@@ -495,7 +495,7 @@ func TestDeleteNotification(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	t.Run("return 403 for accessing another user's resource", func(t *testing.T) {
+	t.Run("return 403 for accessing another friendship's resource", func(t *testing.T) {
 		request := deleteNotificationRequest(notif1.ID, user2.ID)
 		response := httptest.NewRecorder()
 
@@ -505,7 +505,7 @@ func TestDeleteNotification(t *testing.T) {
 		_ = json.Unmarshal(response.Body.Bytes(), &got)
 
 		want := map[string]interface{}{
-			"message": "forbidden from accessing another user's resource",
+			"message": "forbidden from accessing another friendship's resource",
 		}
 
 		assertResponseCode(t, response.Code, http.StatusForbidden)

@@ -109,7 +109,7 @@ func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *h
 	userID := chi.URLParam(request, "user_id")
 
 	if userID == "" {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "user id is required", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(errors.New("id is required"), http.StatusBadRequest, "friendship id is required", nil))
 		return
 	}
 
@@ -131,7 +131,7 @@ func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *h
 	_, err = h.UserStore.FindUserByID(newUserID)
 
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusNotFound, "no user found with the id", nil))
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusNotFound, "no friendship found with the id", nil))
 		return
 	}
 

@@ -396,7 +396,7 @@ func TestVerifyOTP(t *testing.T) {
 	}
 	server := &auth.Handler{Store: &store, OTPStore: &otpStore}
 
-	t.Run("validate the otp and update user's verified status", func(t *testing.T) {
+	t.Run("validate the otp and update friendship's verified status", func(t *testing.T) {
 		data := []byte(`{ "email": "adedunmola@gmail.com", "code": "123456" }`)
 		request := verifyOTPRequest(data)
 		response := httptest.NewRecorder()
@@ -473,7 +473,7 @@ func TestRequestOTP(t *testing.T) {
 	}
 	server := &auth.Handler{Store: &store, OTPStore: &otpStore, Queue: &mockQueue}
 
-	t.Run("send otp to user", func(t *testing.T) {
+	t.Run("send otp to friendship", func(t *testing.T) {
 		data := []byte(`{ "email": "adedunmola@gmail.com" }`)
 
 		request := verifyOTPRequest(data)
@@ -484,7 +484,7 @@ func TestRequestOTP(t *testing.T) {
 		assertResponseCode(t, response.Code, http.StatusOK)
 	})
 
-	t.Run("no user found with email", func(t *testing.T) {
+	t.Run("no friendship found with email", func(t *testing.T) {
 		data := []byte(`{ "email": "ade@gmail.com" }`)
 
 		request := verifyOTPRequest(data)

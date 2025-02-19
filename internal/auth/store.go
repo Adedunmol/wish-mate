@@ -51,7 +51,7 @@ func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 	err = row.Scan(&user.Username, &user.FirstName, &user.LastName, &user.LastName)
 
 	if err != nil {
-		return CreateUserResponse{}, fmt.Errorf("error scanning row (insert user): %w", err)
+		return CreateUserResponse{}, fmt.Errorf("error scanning row (insert friendship): %w", err)
 	}
 
 	err = tx.Commit(context.Background())
