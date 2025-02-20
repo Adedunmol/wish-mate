@@ -1,7 +1,11 @@
 package wishlist
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
 	"github.com/jackc/pgx/v5"
+	"time"
 )
 
 type Store interface {
@@ -27,10 +31,100 @@ func NewWishlistStore(db *pgx.Conn) *WishlistStore {
 
 func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistResponse, error) {
 
-	return WishlistResponse{}, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var wishlist WishlistResponse
+
+	query := `INSERT INTO wishlists (user_id, name, description, notify_before, date) 
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, description, notify_before, date;`
+
+	err = w.db.QueryRow(ctx, query, userID, body.Name, body.Description, body.NotifyBefore, body.Date).
+		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error inserting wishlist: %w", err)
+	}
+
+	wishlist.Items = make([]ItemResponse, 0)
+
+	insertItemQuery := `INSERT INTO items (wishlist_id, name, description, link) VALUES ($1, $2, $3, $4) RETURNING id, name, description, price;`
+	for _, item := range body.Items {
+		var newItem ItemResponse
+		err = w.db.QueryRow(ctx, insertItemQuery, wishlist.ID, item.Name, item.Description, item.Link).
+			Scan(&newItem.ID, &newItem.Name, &newItem.Description, &newItem.Link)
+
+		if err != nil {
+			return WishlistResponse{}, fmt.Errorf("error inserting item: %w", err)
+		}
+		wishlist.Items = append(wishlist.Items, newItem)
+	}
+
+	return wishlist, nil
 }
 
 func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistResponse, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var wishlist WishlistResponse
+
+	query := `SELECT id, user_id, name, description, notify_before, date 
+		FROM wishlists WHERE id = $1;`
+	err = w.db.QueryRow(ctx, query, wishlistID).
+		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error fetching wishlist: %w", err)
+	}
+
+	wishlist.Items = make([]ItemResponse, 0)
+
+	var itemsQuery string
+	if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+		itemsQuery = `SELECT i.id, i.name, i.description, i.link, u.id AS user_id
+			FROM items i 
+			LEFT JOIN item_picks ip ON i.id = ip.item_id
+			LEFT JOIN users u ON ip.user_id = u.id
+			WHERE i.wishlist_id = $1;`
+	} else {
+		itemsQuery = `SELECT id, name, description, price FROM items WHERE wishlist_id = $1;`
+	}
+
+	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error fetching items: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item ItemResponse
+		var userID sql.NullInt64
+		if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+			err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID)
+			if err != nil {
+				return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
+			}
+		} else {
+			err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link)
+			if err != nil {
+				return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
+			}
+		}
+		wishlist.Items = append(wishlist.Items, item)
+	}
+
 	return WishlistResponse{}, nil
 }
 
