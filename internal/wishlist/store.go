@@ -298,7 +298,48 @@ func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 }
 
 func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
-	return ItemResponse{}, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var item ItemResponse
+	var pickedBy auth.User
+
+	query := `
+	SELECT i.id, i.name, i.description, i.link
+	FROM items i
+	WHERE i.id = $1 AND i.wishlist_id = $2;`
+
+	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ItemResponse{}, errors.New("item not found in wishlist")
+		}
+		return ItemResponse{}, fmt.Errorf("error retrieving item: %w", err)
+	}
+
+	// If the wishlist date has passed or is today, fetch the user who picked the item
+	var wishlistDate string
+	err = w.db.QueryRow(ctx, "SELECT date FROM wishlists WHERE id = $1", wishlistID).Scan(&wishlistDate)
+	if err == nil && wishlistDate <= fmt.Sprintf("%v", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+		pickQuery := `
+		SELECT u.id, u.username, u.first_name, u.last_name
+		FROM users u
+		JOIN item_picks ip ON u.id = ip.user_id
+		WHERE ip.item_id = $1 LIMIT 1;`
+
+		err = w.db.QueryRow(ctx, pickQuery, itemID).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
+		if err == nil {
+			item.PickedBy = pickedBy
+		}
+	}
+
+	return item, nil
 }
 
 func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error) {
