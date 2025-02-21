@@ -343,13 +343,102 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 }
 
 func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error) {
-	return ItemResponse{}, nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var item ItemResponse
+
+	query := `
+	UPDATE items SET 
+		name = COALESCE(NULLIF($1, ''), name),
+		description = COALESCE(NULLIF($2, ''), description),
+		link = COALESCE(NULLIF($3, ''), link)
+	WHERE id = $4 AND wishlist_id = $5
+	RETURNING id, name, description, link;`
+
+	err = w.db.QueryRow(ctx, query, body.Name, body.Description, body.Link, itemID, wishlistID).
+		Scan(&item.ID, &item.Name, &item.Description, &item.Link)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ItemResponse{}, errors.New("item not found in wishlist")
+		}
+		return ItemResponse{}, fmt.Errorf("error updating item: %w", err)
+	}
+
+	return item, nil
 }
 
 func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, error) {
-	return ItemResponse{}, nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var item ItemResponse
+
+	// Ensure item is not already picked
+	var existingPicker *int
+	err = w.db.QueryRow(ctx, "SELECT picked_by FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingPicker)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ItemResponse{}, errors.New("item not found in wishlist")
+		}
+		return ItemResponse{}, fmt.Errorf("error checking item status: %w", err)
+	}
+
+	if existingPicker != nil {
+		return ItemResponse{}, errors.New("item already picked by another user")
+	}
+
+	// Pick the item
+	query := `
+	UPDATE items SET picked_by = $1
+	WHERE id = $2 AND wishlist_id = $3
+	RETURNING id, name, description, link, picked_by;`
+
+	err = w.db.QueryRow(ctx, query, userID, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.PickedBy)
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error picking item: %w", err)
+	}
+
+	return item, nil
 }
 
 func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := "DELETE FROM items WHERE id = $1 AND wishlist_id = $2"
+	result, err := w.db.Exec(ctx, query, itemID, wishlistID)
+	if err != nil {
+		return fmt.Errorf("error deleting item: %w", err)
+	}
+
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return errors.New("item not found in wishlist")
+	}
+
 	return nil
 }
