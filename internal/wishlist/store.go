@@ -3,6 +3,7 @@ package wishlist
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/jackc/pgx/v5"
@@ -224,11 +225,75 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 }
 
 func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	return WishlistResponse{}, nil
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var wishlist WishlistResponse
+
+	// Check if the user is the owner of the wishlist
+	var ownerID int
+	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return WishlistResponse{}, errors.New("wishlist not found")
+		}
+		return WishlistResponse{}, fmt.Errorf("error checking wishlist ownership: %w", err)
+	}
+
+	if ownerID != userID {
+		return WishlistResponse{}, errors.New("forbidden: you do not own this wishlist")
+	}
+
+	// Update the wishlist with non-empty fields
+	query := `UPDATE wishlists SET 
+		name = COALESCE(NULLIF($1, ''), name),
+		description = COALESCE(NULLIF($2, ''), description)
+		WHERE id = $3 RETURNING id, user_id, name, description, notify_before, date;`
+
+	err = w.db.QueryRow(ctx, query, body.Name, body.Description, wishlistID).Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
+	if err != nil {
+		return WishlistResponse{}, fmt.Errorf("error updating wishlist: %w", err)
+	}
+
+	return wishlist, nil
 }
 
 func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Check if the user is the owner of the wishlist
+	var ownerID int
+	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("wishlist not found")
+		}
+		return fmt.Errorf("error checking wishlist ownership: %w", err)
+	}
+
+	if ownerID != userID {
+		return errors.New("forbidden: you do not own this wishlist")
+	}
+
+	// Delete the wishlist
+	_, err = w.db.Exec(ctx, "DELETE FROM wishlists WHERE id = $1", wishlistID)
+	if err != nil {
+		return fmt.Errorf("error deleting wishlist: %w", err)
+	}
+
 	return nil
 }
 
