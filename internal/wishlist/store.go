@@ -138,7 +138,89 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 }
 
 func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistResponse, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var wishlists []WishlistResponse
+
+	query := `SELECT id, user_id, name, description, notify_before, date 
+		FROM wishlists WHERE user_id = $1;`
+
+	rows, err := w.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching wishlists: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var wishlist WishlistResponse
+		err := rows.Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning wishlist: %w", err)
+		}
+
+		wishlist.Items = []ItemResponse{}
+		var itemsQuery string
+
+		if isOwner {
+			// Owner: Show all items, picked and unpicked
+			if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+				itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
+					FROM items i 
+					LEFT JOIN item_picks ip ON i.id = ip.item_id
+					LEFT JOIN users u ON ip.user_id = u.id
+					WHERE i.wishlist_id = $1;`
+			} else {
+				itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
+			}
+		} else {
+			// Non-owner: Show only unpicked items
+			itemsQuery = `SELECT id, name, description, link FROM items 
+				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
+		}
+
+		itemRows, err := w.db.Query(ctx, itemsQuery, wishlist.ID)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching items: %w", err)
+		}
+		defer itemRows.Close()
+
+		for itemRows.Next() {
+			var item ItemResponse
+			var user auth.User
+			var userID sql.NullInt64
+			var username sql.NullString
+			var firstName sql.NullString
+			var lastName sql.NullString
+
+			err := itemRows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
+			if err != nil {
+				return nil, fmt.Errorf("error scanning item: %w", err)
+			}
+
+			if userID.Valid {
+				user = auth.User{
+					ID:        int(userID.Int64),
+					Username:  username.String,
+					FirstName: firstName.String,
+					LastName:  lastName.String,
+				}
+				item.PickedBy = user
+			}
+
+			wishlist.Items = append(wishlist.Items, item)
+		}
+
+		wishlists = append(wishlists, wishlist)
+	}
+
+	return wishlists, nil
 }
 
 func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error) {
