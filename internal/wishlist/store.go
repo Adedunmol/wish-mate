@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/jackc/pgx/v5"
 	"time"
 )
@@ -93,13 +94,13 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	var itemsQuery string
 	if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
-		itemsQuery = `SELECT i.id, i.name, i.description, i.link, u.id AS user_id
+		itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
 			FROM items i 
 			LEFT JOIN item_picks ip ON i.id = ip.item_id
 			LEFT JOIN users u ON ip.user_id = u.id
 			WHERE i.wishlist_id = $1;`
 	} else {
-		itemsQuery = `SELECT id, name, description, price FROM items WHERE wishlist_id = $1;`
+		itemsQuery = `SELECT id, name, description, price, NULL, NULL, NULL FROM items WHERE wishlist_id = $1;`
 	}
 
 	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
@@ -110,21 +111,29 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	for rows.Next() {
 		var item ItemResponse
+		var user auth.User
 		var userID sql.NullInt64
-		if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
-			err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID)
-			if err != nil {
-				return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
-			}
-		} else {
-			err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link)
-			if err != nil {
-				return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
-			}
+		var username sql.NullString
+		var firstName sql.NullString
+		var lastName sql.NullString
+
+		err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
+		if err != nil {
+			return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
 		}
+
+		if userID.Valid {
+			user = auth.User{
+				ID:        int(userID.Int64),
+				Username:  username.String,
+				FirstName: firstName.String,
+				LastName:  lastName.String,
+			}
+			item.PickedBy = user
+		}
+
 		wishlist.Items = append(wishlist.Items, item)
 	}
-
 	return WishlistResponse{}, nil
 }
 
