@@ -30,6 +30,15 @@ type ItemResponse struct {
 	PickedBy    auth.User `json:"picked_by,omitempty"`
 }
 
+type ItemData struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Taken       bool   `json:"taken"`
+	Link        string `json:"link"`
+	PickedBy    int    `json:"picked_by,omitempty"`
+}
+
 type WishlistResponse struct {
 	ID           int            `json:"id,omitempty"`
 	UserID       int            `json:"user_id,omitempty"`

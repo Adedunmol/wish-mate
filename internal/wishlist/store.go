@@ -94,14 +94,19 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 	wishlist.Items = make([]ItemResponse, 0)
 
 	var itemsQuery string
-	if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
-		itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
-			FROM items i 
-			LEFT JOIN item_picks ip ON i.id = ip.item_id
-			LEFT JOIN users u ON ip.user_id = u.id
-			WHERE i.wishlist_id = $1;`
+
+	if userID == wishlist.UserID {
+		if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+			itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
+					FROM items i 
+					LEFT JOIN users u ON i.picked_by = u.id
+					WHERE i.wishlist_id = $1;`
+		} else {
+			itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
+		}
 	} else {
-		itemsQuery = `SELECT id, name, description, price, NULL, NULL, NULL FROM items WHERE wishlist_id = $1;`
+		itemsQuery = `SELECT id, name, description, link FROM items 
+				WHERE wishlist_id = $1 AND picked_by = NULL;`
 	}
 
 	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
@@ -174,8 +179,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 			if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
 				itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
 					FROM items i 
-					LEFT JOIN item_picks ip ON i.id = ip.item_id
-					LEFT JOIN users u ON ip.user_id = u.id
+					LEFT JOIN users u ON i.picked_by = u.id
 					WHERE i.wishlist_id = $1;`
 			} else {
 				itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
@@ -183,7 +187,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		} else {
 			// Non-owner: Show only unpicked items
 			itemsQuery = `SELECT id, name, description, link FROM items 
-				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
+				WHERE wishlist_id = $1 AND picked_by = NULL;`
 		}
 
 		itemRows, err := w.db.Query(ctx, itemsQuery, wishlist.ID)
@@ -307,15 +311,15 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 	}
 	defer tx.Rollback(ctx)
 
-	var item ItemResponse
+	var item ItemData
 	var pickedBy auth.User
 
 	query := `
-	SELECT i.id, i.name, i.description, i.link
+	SELECT i.id, i.name, i.description, i.link, i.picked_by, i.taken
 	FROM items i
 	WHERE i.id = $1 AND i.wishlist_id = $2;`
 
-	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
+	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.PickedBy, &item.Taken)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ItemResponse{}, errors.New("item not found in wishlist")
@@ -323,23 +327,31 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 		return ItemResponse{}, fmt.Errorf("error retrieving item: %w", err)
 	}
 
+	itemResponse := ItemResponse{
+		ID:          item.ID,
+		Name:        item.Name,
+		Description: item.Description,
+		Link:        item.Link,
+		Taken:       item.Taken,
+	}
+
 	// If the wishlist date has passed or is today, fetch the user who picked the item
 	var wishlistDate string
 	err = w.db.QueryRow(ctx, "SELECT date FROM wishlists WHERE id = $1", wishlistID).Scan(&wishlistDate)
 	if err == nil && wishlistDate <= fmt.Sprintf("%v", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+
 		pickQuery := `
 		SELECT u.id, u.username, u.first_name, u.last_name
 		FROM users u
-		JOIN item_picks ip ON u.id = ip.user_id
-		WHERE ip.item_id = $1 LIMIT 1;`
+		WHERE u.id = $1 LIMIT 1;`
 
-		err = w.db.QueryRow(ctx, pickQuery, itemID).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
+		err = w.db.QueryRow(ctx, pickQuery, item.PickedBy).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
 		if err == nil {
-			item.PickedBy = pickedBy
+			itemResponse.PickedBy = pickedBy
 		}
 	}
 
-	return item, nil
+	return itemResponse, nil
 }
 
 func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error) {
