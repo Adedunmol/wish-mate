@@ -9,3 +9,8 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres-data:/postgres/postgres-data
+
+  redis:
+    image: redis
+    ports:
+      - ${REDIS_PORT}:6379

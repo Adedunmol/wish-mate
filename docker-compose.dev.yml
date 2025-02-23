@@ -25,6 +25,12 @@ services:
     extends:
       service: postgres
       file: docker-compose.base.yml
+
+  redis:
+    extends:
+      service: redis
+      file: docker-compose.base.yml
+
 volumes:
   postgres-data:
 
