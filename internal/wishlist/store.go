@@ -98,15 +98,16 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 	if userID == wishlist.UserID {
 		if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
 			itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
-					FROM items i 
-					LEFT JOIN users u ON i.picked_by = u.id
-					WHERE i.wishlist_id = $1;`
+			FROM items i 
+			LEFT JOIN item_picks ip ON i.id = ip.item_id
+			LEFT JOIN users u ON ip.user_id = u.id
+			WHERE i.wishlist_id = $1;`
 		} else {
 			itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
 		}
 	} else {
 		itemsQuery = `SELECT id, name, description, link FROM items 
-				WHERE wishlist_id = $1 AND picked_by = NULL;`
+				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
 	}
 
 	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
@@ -179,7 +180,8 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 			if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
 				itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
 					FROM items i 
-					LEFT JOIN users u ON i.picked_by = u.id
+					LEFT JOIN item_picks ip ON i.id = ip.item_id
+					LEFT JOIN users u ON ip.user_id = u.id
 					WHERE i.wishlist_id = $1;`
 			} else {
 				itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
@@ -187,7 +189,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		} else {
 			// Non-owner: Show only unpicked items
 			itemsQuery = `SELECT id, name, description, link FROM items 
-				WHERE wishlist_id = $1 AND picked_by = NULL;`
+				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
 		}
 
 		itemRows, err := w.db.Query(ctx, itemsQuery, wishlist.ID)
@@ -311,15 +313,15 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 	}
 	defer tx.Rollback(ctx)
 
-	var item ItemData
+	var item ItemResponse
 	var pickedBy auth.User
 
 	query := `
-	SELECT i.id, i.name, i.description, i.link, i.picked_by, i.taken
+	SELECT i.id, i.name, i.description, i.link
 	FROM items i
 	WHERE i.id = $1 AND i.wishlist_id = $2;`
 
-	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.PickedBy, &item.Taken)
+	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ItemResponse{}, errors.New("item not found in wishlist")
@@ -343,11 +345,12 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 		pickQuery := `
 		SELECT u.id, u.username, u.first_name, u.last_name
 		FROM users u
-		WHERE u.id = $1 LIMIT 1;`
+		JOIN item_picks ip ON u.id = ip.user_id
+		WHERE ip.item_id = $1 LIMIT 1;`
 
-		err = w.db.QueryRow(ctx, pickQuery, item.PickedBy).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
+		err = w.db.QueryRow(ctx, pickQuery, itemID).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
 		if err == nil {
-			itemResponse.PickedBy = pickedBy
+			item.PickedBy = pickedBy
 		}
 	}
 
@@ -402,8 +405,9 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 	var item ItemResponse
 
 	// Ensure item is not already picked
-	var existingPicker *int
-	err = w.db.QueryRow(ctx, "SELECT picked_by FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingPicker)
+	var existingItemID int
+
+	err = w.db.QueryRow(ctx, "SELECT id FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingItemID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ItemResponse{}, errors.New("item not found in wishlist")
@@ -411,17 +415,16 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 		return ItemResponse{}, fmt.Errorf("error checking item status: %w", err)
 	}
 
-	if existingPicker != nil {
+	pickedQuery := `SELECT item_id FROM item_picks WHERE item_id = $1 LIMIT 1;`
+
+	err = w.db.QueryRow(ctx, pickedQuery, itemID).Scan(&existingItemID)
+	if err == nil {
 		return ItemResponse{}, errors.New("item already picked by another user")
 	}
 
-	// Pick the item
-	query := `
-	UPDATE items SET picked_by = $1
-	WHERE id = $2 AND wishlist_id = $3
-	RETURNING id, name, description, link, picked_by;`
+	query := `INSERT INTO item_picks (item_id, user_id) VALUES ($1, $2) RETURNING id, name, description, link;`
 
-	err = w.db.QueryRow(ctx, query, userID, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.PickedBy)
+	err = w.db.QueryRow(ctx, query, userID, itemID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
 	if err != nil {
 		return ItemResponse{}, fmt.Errorf("error picking item: %w", err)
 	}
@@ -450,6 +453,18 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 
 	if rowsAffected == 0 {
 		return errors.New("item not found in wishlist")
+	}
+
+	query = "DELETE FROM item_picks WHERE id = $1 AND wishlist_id = $2"
+	result, err = w.db.Exec(ctx, query, itemID, wishlistID)
+	if err != nil {
+		return fmt.Errorf("error deleting item from join table: %w", err)
+	}
+
+	rowsAffected = result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return errors.New("item not found in item_picks")
 	}
 
 	return nil
