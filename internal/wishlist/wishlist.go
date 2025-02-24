@@ -79,11 +79,11 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 
 	// create a task in the reminder table
 	//taskBody := reminder.CreateTaskBody{
-	//	Name:      "notification",
+	//	Name:      "Wishlist",
 	//	UserID:    userData.ID,
-	//	Title:     "Wishlist",
+	//	Title:     "Wishlist Reminder",
 	//	Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
-	//	Type:      "normal",
+	//	Type:      "wishlist",
 	//	ExecuteAt: &scheduledDate,
 	//}
 	//

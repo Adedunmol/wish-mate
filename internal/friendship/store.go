@@ -122,10 +122,14 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 
 	rows, err := f.db.Query(ctx, query, userID, status)
 
+	if err != nil {
+		return nil, fmt.Errorf("error querying friendhips: %v", err)
+	}
+
 	for rows.Next() {
 		var friendship FriendshipResponse
 
-		err = rows.Scan(&friendship.ID, &friendship.UserID, friendship.FriendID, &friendship.FriendSince)
+		err = rows.Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.FriendSince)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}

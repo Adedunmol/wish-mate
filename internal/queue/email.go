@@ -32,8 +32,8 @@ func HandleEmailTask(ctx context.Context, t *asynq.Task) error {
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 		return fmt.Errorf("error decoding email delivery payload: %w", err)
 	}
-	log.Printf("sending mail to auth: %s", payload.Email)
+	log.Printf("sending mail to user: %s", payload.Email)
 
-	// send mail to auth
+	// send mail to user
 	return nil
 }
