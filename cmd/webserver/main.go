@@ -115,5 +115,10 @@ func enqueueReminders(client *queue.Client, db *pgx.Conn) {
 		log.Printf(errors.Unwrap(err).Error())
 	}
 
-	// get today's birthdays and send notifications to their friends
+	// get today's birthdays and send notifications and mails to their friends
+	log.Printf("checking birthdays due today: %v", currentTime.UTC())
+
+	if err := reminder.EnqueueBirthdays(taskStore, client, &currentTime); err != nil {
+		log.Printf(errors.Unwrap(err).Error())
+	}
 }
