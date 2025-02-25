@@ -42,7 +42,39 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) (ReminderRespons
 
 func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse, error) {
 
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := t.DB.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// add inner join to get the user_id friends (id, email), which the notifications and emails are going to be sent
+	query := `
+		SELECT id, user_id, title, body, execute_at FROM reminders WHERE execute_at <= NOW();
+`
+	var reminders []ReminderResponse
+
+	rows, err := t.DB.Query(ctx, query)
+
+	if err != nil {
+		return nil, fmt.Errorf("error querying reminders: %v", err)
+	}
+
+	for rows.Next() {
+		var reminder ReminderResponse
+
+		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning rows: %w", err)
+		}
+
+		reminders = append(reminders, reminder)
+	}
+
+	return reminders, nil
 }
 
 func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error) {
@@ -59,7 +91,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	query := `
 		SELECT id, user_id, 'Happy Birthday!' AS title, 
        		'Wishing you a wonderful day filled with joy!' AS body, 
-       		'birthday' AS type, 'pending' AS status, 
+       		'birthday' AS type, 'pending' AS status, email 
 		FROM users 
 		WHERE DATE_PART('month', birthdate) = DATE_PART('month', NOW()) 
 		AND DATE_PART('day', birthdate) = DATE_PART('day', NOW());
@@ -75,7 +107,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	for rows.Next() {
 		var reminder ReminderResponse
 
-		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt)
+		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
@@ -93,6 +125,7 @@ func (t *ReminderStore) UpdateReminder(ID int) error {
 type ReminderResponse struct {
 	ID        int        `json:"id"`
 	UserID    int        `json:"user_id"`
+	Email     int        `json:"email"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
 	Type      string     `json:"type"`
@@ -168,9 +201,10 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 			Type: queue.TypeEmailDelivery,
 			Payload: map[string]interface{}{
 				"template": "reminder_mail",
-				"subject":  "",
-				"email":    "",
+				"subject":  "Wishlist Reminder",
+				"email":    task.Email,
 				"data":     "",
+				// embed the data below into a map and then pass into data
 				//"id":       task.ID,
 				//"user_id":  task.UserID,
 				//"title":    task.Title,
@@ -220,9 +254,10 @@ func EnqueueBirthdays(store Store, q queue.Queue, currentTime *time.Time) error 
 			Type: queue.TypeEmailDelivery,
 			Payload: map[string]interface{}{
 				"template": "birthday_mail",
-				"subject":  "",
-				"email":    "",
+				"subject":  "Birthday",
+				"email":    task.Email,
 				"data":     "",
+				// embed the data below into a map and then pass into data
 				//"id":       task.ID,
 				//"user_id":  task.UserID,
 				//"title":    task.Title,
