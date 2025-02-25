@@ -52,6 +52,24 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 			return fmt.Errorf("could not enqueue mail task for: %s: %v", emailPayload.Email, err)
 		}
 		break
+	case TypeBirthdayMailDelivery:
+		emailPayload := BirthdayMailPayload{
+			Email:    taskPayload.Payload["email"].(string),
+			Template: taskPayload.Payload["template"].(string),
+			Subject:  taskPayload.Payload["subject"].(string),
+			Data:     map[string]interface{}{},
+		}
+
+		task, err := emailPayload.NewTask()
+		if err != nil {
+			return fmt.Errorf("error creating new birthday email task: %v", err)
+		}
+
+		_, err = qc.client.Enqueue(task)
+		if err != nil {
+			return fmt.Errorf("could not enqueue birthday mail task for: %s: %v", emailPayload.Email, err)
+		}
+		break
 	case TypeNotificationDelivery:
 		notificationPayload := NotificationDeliveryPayload{
 			ID:     taskPayload.Payload["id"].(int),
