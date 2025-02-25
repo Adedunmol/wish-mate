@@ -175,6 +175,7 @@ func GetBirthdays(store Store, currentTime *time.Time) ([]ReminderResponse, erro
 
 func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error {
 
+	// this should send in reminders and the details of the users to send the reminders to
 	tasks, err := GetReminders(store, currentTime)
 	if err != nil {
 		return fmt.Errorf("error getting tasks: %v", err)
