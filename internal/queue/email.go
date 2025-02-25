@@ -35,5 +35,6 @@ func HandleEmailTask(ctx context.Context, t *asynq.Task) error {
 	log.Printf("sending mail to user: %s", payload.Email)
 
 	// send mail to user
+
 	return nil
 }

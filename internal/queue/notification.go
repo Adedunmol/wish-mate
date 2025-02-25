@@ -38,6 +38,8 @@ func WrapHandler(store notification.Store) func(ctx context.Context, t *asynq.Ta
 		}
 		log.Printf("creating notification %d for: %d", payload.ID, payload.UserID)
 
+		// send in a collection of the user's friends from sql query
+
 		_, err := store.CreateNotification(&notification.CreateNotificationBody{
 			UserID: payload.UserID,
 			Title:  payload.Title,
@@ -48,8 +50,6 @@ func WrapHandler(store notification.Store) func(ctx context.Context, t *asynq.Ta
 		if err != nil {
 			return fmt.Errorf("error creating notification: %w", err)
 		}
-
-		// send mail
 
 		return nil
 	}
