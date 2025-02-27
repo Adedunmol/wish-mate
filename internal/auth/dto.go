@@ -47,6 +47,7 @@ type OTP struct {
 }
 
 type UpdateUserBody struct {
+	helpers.Validation
 	Verified bool `json:"verified"`
 }
 

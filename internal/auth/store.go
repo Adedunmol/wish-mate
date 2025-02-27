@@ -20,6 +20,7 @@ type Store interface {
 	FindUserByID(id int) (User, error)
 	UpdateUser(id int, data UpdateUserBody) (User, error)
 	ComparePasswords(storedPassword, candidatePassword string) bool
+	DeleteRefreshToken(refreshToken string) error
 }
 
 type UserStore struct {
@@ -142,4 +143,8 @@ func (s *UserStore) ComparePasswords(storedPassword, candidatePassword string) b
 		return false
 	}
 	return true
+}
+
+func (s *UserStore) DeleteRefreshToken(refreshToken string) error {
+	return nil
 }

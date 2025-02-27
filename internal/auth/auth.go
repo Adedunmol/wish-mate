@@ -206,7 +206,29 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request *http.Request) {
+
+	refreshToken, err := request.Cookie("refresh_token")
+
+	response := Response{
+		Status:  "Success",
+		Message: "User logged out successfully",
+	}
+
+	if err != nil {
+		helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+		return
+	}
+
+	err = h.Store.DeleteRefreshToken(refreshToken.Value)
+
+	if err != nil {
+		helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+		return
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+}
 
 func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
 
@@ -283,3 +305,5 @@ func (h *Handler) ResetPasswordRequestHandler(responseWriter http.ResponseWriter
 }
 
 func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+// implement oauth

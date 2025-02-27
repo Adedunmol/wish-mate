@@ -125,6 +125,10 @@ func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword strin
 	return storedPassword == candidatePassword
 }
 
+func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
+	return nil
+}
+
 type FailingStubUserStore struct {
 	users []auth.User
 }
@@ -162,6 +166,10 @@ func (s *FailingStubUserStore) UpdateUser(id int, data auth.UpdateUserBody) (aut
 
 func (s *FailingStubUserStore) ComparePasswords(_, _ string) bool {
 	return false
+}
+
+func (s *FailingStubUserStore) DeleteRefreshToken(refresToken string) error {
+	return nil
 }
 
 func TestPOSTUser(t *testing.T) {
@@ -506,6 +514,51 @@ func TestRequestOTP(t *testing.T) {
 	})
 }
 
+func TestLogout(t *testing.T) {
+
+	store := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+	}}
+	server := &auth.Handler{Store: &store}
+
+	t.Run("log out user (with cookie)", func(t *testing.T) {
+		request := logoutUserRequest()
+		response := httptest.NewRecorder()
+
+		server.LogoutUserHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "User logged out successfully",
+		}
+
+		assertResponseBody(t, got, want)
+		assertResponseCode(t, response.Code, http.StatusNoContent)
+	})
+
+	t.Run("log out user (without cookie)", func(t *testing.T) {
+		request, _ := http.NewRequest("POST", "/api/v1/users/logout", nil)
+		response := httptest.NewRecorder()
+
+		server.LogoutUserHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "User logged out successfully",
+		}
+
+		assertResponseBody(t, got, want)
+		assertResponseCode(t, response.Code, http.StatusNoContent)
+	})
+
+}
+
 func createUserRequest(data []byte) *http.Request {
 
 	request, _ := http.NewRequest("POST", "/api/v1/users/register", bytes.NewReader(data))
@@ -516,6 +569,17 @@ func createUserRequest(data []byte) *http.Request {
 func loginUserRequest(data []byte) *http.Request {
 
 	request, _ := http.NewRequest("POST", "/api/v1/users/login", bytes.NewReader(data))
+
+	return request
+}
+
+func logoutUserRequest() *http.Request {
+
+	request, _ := http.NewRequest("POST", "/api/v1/users/logout", nil)
+
+	cookie := http.Cookie{Name: "refresh_token", Value: "somereandomtoken", MaxAge: 10, HttpOnly: true}
+
+	request.AddCookie(&cookie)
 
 	return request
 }
