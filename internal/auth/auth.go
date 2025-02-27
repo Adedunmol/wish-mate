@@ -367,3 +367,60 @@ func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, reque
 }
 
 // implement oauth
+//
+//const (
+//	key    = "somerandomkey"
+//	maxAge = 86400 * 30
+//	isProd = false
+//)
+//
+//func (h *Handler) NewAuthHandler() {
+//
+//	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+//	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+//
+//	// gorilla sessions
+//	store := sessions.NewCookieStore([]byte(key))
+//	store.MaxAge(maxAge)
+//
+//	store.Options.Path = "/"
+//	store.Options.HttpOnly = true
+//	store.Options.Secure = isProd
+//
+//	gothic.Store = store
+//
+//	goth.UseProviders(
+//		google.New(googleClientID, googleClientSecret, "http://localhost:3000/auth/google/callback"),
+//	)
+//}
+//
+//func (h *Handler) GetAuthCallback(responseWriter http.ResponseWriter, request *http.Request) {
+//	provider := chi.URLParam(request, "provider")
+//
+//	request = request.WithContext(context.WithValue(request.Context(), "provider", provider))
+//
+//	user, err := gothic.CompleteUserAuth(responseWriter, request)
+//	if err != nil {
+//		fmt.Fprintln(responseWriter, err)
+//		return
+//	}
+//	fmt.Println(user)
+//
+//	http.Redirect(responseWriter, request, "/", http.StatusFound)
+//}
+//
+//func (h *Handler) LogoutOAuth(responseWriter http.ResponseWriter, request *http.Request) {
+//	gothic.Logout(responseWriter, request)
+//	responseWriter.Header().Set("Location", "/")
+//	responseWriter.WriteHeader(http.StatusTemporaryRedirect)
+//}
+//
+//func (h *Handler) GetUserOAuth(responseWriter http.ResponseWriter, request *http.Request) {
+//	if gothUser, err := gothic.CompleteUserAuth(responseWriter, request); err == nil {
+//		//t, _ := template.New("foo").Parse(userTemplate)
+//		//t.Execute(responseWriter, gothUser)
+//		http.Redirect(responseWriter, request, "/", http.StatusFound)
+//	} else {
+//		gothic.BeginAuthHandler(responseWriter, request)
+//	}
+//}
