@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/Adedunmol/wish-mate/internal/auth"
@@ -536,7 +537,7 @@ func TestLogout(t *testing.T) {
 		}
 
 		assertResponseBody(t, got, want)
-		assertResponseCode(t, response.Code, http.StatusNoContent)
+		assertResponseCode(t, response.Code, http.StatusOK)
 	})
 
 	t.Run("log out user (without cookie)", func(t *testing.T) {
@@ -554,9 +555,98 @@ func TestLogout(t *testing.T) {
 		}
 
 		assertResponseBody(t, got, want)
-		assertResponseCode(t, response.Code, http.StatusNoContent)
+		assertResponseCode(t, response.Code, http.StatusOK)
 	})
 
+}
+
+func TestPasswordReset(t *testing.T) {
+
+	store := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+	}}
+	server := &auth.Handler{Store: &store}
+
+	t.Run("update user password", func(t *testing.T) {
+		data := []byte(`{ "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := resetPasswordRequest("adedunmola@gmail.com", data)
+		response := httptest.NewRecorder()
+
+		server.ResetPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Password has been reset successfully",
+		}
+
+		assertResponseBody(t, got, want)
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("return unauthorized if user not logged in", func(t *testing.T) {
+		data := []byte(`{ "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request, _ := http.NewRequest("POST", "/auth/verify", bytes.NewReader(data))
+		response := httptest.NewRecorder()
+
+		server.ResetPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "user not logged in",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return unauthorized if old password is incorrect", func(t *testing.T) {
+		data := []byte(`{ "old_password": "oldpassword", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := resetPasswordRequest("adedunmola@gmail.com", data)
+		response := httptest.NewRecorder()
+
+		server.ResetPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"message": "invalid credentials",
+		}
+
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("return bad request if required fields are not sent", func(t *testing.T) {
+		data := []byte(`{ "old_password": "oldpassword", "new_password": "newpassword" }`)
+		request := resetPasswordRequest("adedunmola@gmail.com", data)
+		response := httptest.NewRecorder()
+
+		server.ResetPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "invalid request body",
+			"problems": map[string][]string{
+				"NewPasswordConfirm": []string{"NewPasswordConfirm required"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
 }
 
 func createUserRequest(data []byte) *http.Request {
@@ -586,6 +676,13 @@ func logoutUserRequest() *http.Request {
 
 func verifyOTPRequest(data []byte) *http.Request {
 	request, _ := http.NewRequest("POST", "/auth/verify", bytes.NewReader(data))
+
+	return request
+}
+
+func resetPasswordRequest(email string, data []byte) *http.Request {
+	ctx := context.WithValue(context.Background(), "email", email)
+	request, _ := http.NewRequestWithContext(ctx, "POST", "/auth/reset", bytes.NewReader(data))
 
 	return request
 }

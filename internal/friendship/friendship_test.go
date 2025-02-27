@@ -65,6 +65,14 @@ func (s *StubUserStore) FindUserByID(id int) (auth.User, error) {
 	return auth.User{}, helpers.ErrNotFound
 }
 
+func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
+	return nil
+}
+
+func (s *StubUserStore) UpdateUser(id int, data auth.UpdateUserBody) (auth.User, error) {
+	return auth.User{}, nil
+}
+
 func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword string) bool {
 	return storedPassword == candidatePassword
 }

@@ -23,6 +23,7 @@ type CreateUserBody struct {
 	Password  string `json:"password" validate:"required"`
 	Username  string `json:"username" validate:"required"`
 	Email     string `json:"email" validate:"required,email"`
+	// date of birth
 }
 
 type LoginUserBody struct {
@@ -48,7 +49,8 @@ type OTP struct {
 
 type UpdateUserBody struct {
 	helpers.Validation
-	Verified bool `json:"verified"`
+	Verified bool   `json:"verified"`
+	Password string `json:"password"`
 }
 
 type VerifyOTPBody struct {
@@ -60,4 +62,11 @@ type VerifyOTPBody struct {
 type RequestOTPBody struct {
 	helpers.Validation
 	Email string `json:"email" validate:"required,email"`
+}
+
+type ResetPasswordBody struct {
+	helpers.Validation
+	OldPassword        string `json:"old_password" validate:"required"`
+	NewPassword        string `json:"new_password" validate:"required"`
+	NewPasswordConfirm string `json:"new_password_confirm" validate:"required"`
 }

@@ -216,18 +216,18 @@ func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request 
 	}
 
 	if err != nil {
-		helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+		helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 		return
 	}
 
 	err = h.Store.DeleteRefreshToken(refreshToken.Value)
 
 	if err != nil {
-		helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+		helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 		return
 	}
 
-	helpers.WriteJSONResponse(responseWriter, response, http.StatusNoContent)
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
 func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
@@ -301,9 +301,69 @@ func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) ResetPasswordRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *Handler) ForgotPasswordRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
 }
 
-func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) ForgotPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+
+func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	body, problems, err := helpers.DecodeAndValidate[*ResetPasswordBody](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	email := request.Context().Value("email")
+
+	if email == nil || email == "" {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(nil, http.StatusUnauthorized, "user not logged in", nil))
+		return
+	}
+
+	userData, err := h.Store.FindUserByEmail(email.(string))
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	match := h.Store.ComparePasswords(userData.Password, body.OldPassword)
+
+	if !match {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), 10)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	updateBody := UpdateUserBody{Password: string(hashedPassword)}
+
+	_, err = h.Store.UpdateUser(userData.ID, updateBody)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Password has been reset successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
 
 // implement oauth

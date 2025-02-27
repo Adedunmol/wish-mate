@@ -58,6 +58,14 @@ func (s *StubUserStore) ComparePasswords(storedPassword, candidatePassword strin
 	return storedPassword == candidatePassword
 }
 
+func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
+	return nil
+}
+
+func (s *StubUserStore) UpdateUser(id int, data auth.UpdateUserBody) (auth.User, error) {
+	return auth.User{}, nil
+}
+
 type StubWishlistStore struct {
 	wishlists []wishlist.WishlistResponse
 }
