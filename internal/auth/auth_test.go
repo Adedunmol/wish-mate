@@ -56,10 +56,10 @@ func (s *StubOtpStore) ValidateOTP(email string, otp string) (bool, error) {
 		if otpData.Email == email {
 			if otpData.OTP != otp {
 				return false, helpers.ErrBadRequest
-			}
-
-			if otpData.ExpiresAt.Before(time.Now()) {
+			} else if otpData.ExpiresAt.Before(time.Now()) {
 				return false, helpers.ErrBadRequest
+			} else {
+				return true, nil
 			}
 		}
 	}
@@ -697,6 +697,107 @@ func TestForgotPasswordRequest(t *testing.T) {
 	})
 }
 
+func TestForgotPassword(t *testing.T) {
+	currentTime := time.Now()
+	futureTime := time.Now().Add(10 * time.Minute)
+
+	store := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+	}}
+	otpStore := StubOtpStore{
+		otps: []auth.OTP{
+			{ID: 1, Email: "adedunmola@gmail.com", OTP: "123456", ExpiresAt: &futureTime, CreatedAt: &currentTime},
+		},
+	}
+	server := &auth.Handler{Store: &store, OTPStore: &otpStore}
+
+	t.Run("update user password", func(t *testing.T) {
+		data := []byte(`{ "email": "adedunmola@gmail.com", "code": "123456", "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := forgotPasswordRequest(data)
+		response := httptest.NewRecorder()
+
+		server.ForgotPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		want := map[string]interface{}{
+			"status":  "Success",
+			"message": "Password has been reset successfully",
+		}
+
+		assertResponseBody(t, got, want)
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("return bad request if required fields are not sent", func(t *testing.T) {
+		data := []byte(`{ "email": "adedunmola@gmail.com", "old_password": "oldpassword", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := forgotPasswordRequest(data)
+		response := httptest.NewRecorder()
+
+		server.ForgotPasswordHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		wantBody := map[string]interface{}{
+			"message": "invalid request body",
+			"problems": map[string][]string{
+				"Code": []string{"Code required"},
+			},
+		}
+
+		wantJSON, _ := json.Marshal(wantBody)
+
+		var want map[string]interface{}
+		_ = json.Unmarshal(wantJSON, &want)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+		assertResponseBody(t, got, want)
+	})
+
+	t.Run("invalid otp", func(t *testing.T) {
+		data := []byte(`{ "email": "adedunmola@gmail.com", "code": "123478", "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := forgotPasswordRequest(data)
+		response := httptest.NewRecorder()
+
+		server.ForgotPasswordHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+	})
+
+	t.Run("expired otp", func(t *testing.T) {
+		pastTime := time.Now().Add(-10 * time.Minute)
+		store := StubUserStore{users: []auth.User{
+			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola"},
+		}}
+		otpStore := StubOtpStore{
+			otps: []auth.OTP{
+				{ID: 1, Email: "adedunmola@gmail.com", OTP: "123456", ExpiresAt: &pastTime, CreatedAt: &currentTime},
+			},
+		}
+		server := &auth.Handler{Store: &store, OTPStore: &otpStore}
+
+		data := []byte(`{ "email": "adedunmola@gmail.com", "code": "123456", "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := forgotPasswordRequest(data)
+		response := httptest.NewRecorder()
+
+		server.ForgotPasswordHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+	})
+
+	t.Run("no otp found with email", func(t *testing.T) {
+		data := []byte(`{ "email": "ade@gmail.com", "code": "123456", "old_password": "password", "new_password": "newpassword", "new_password_confirm": "newpassword" }`)
+		request := forgotPasswordRequest(data)
+		response := httptest.NewRecorder()
+
+		server.ForgotPasswordHandler(response, request)
+
+		assertResponseCode(t, response.Code, http.StatusBadRequest)
+	})
+}
+
 func createUserRequest(data []byte) *http.Request {
 
 	request, _ := http.NewRequest("POST", "/api/v1/users/register", bytes.NewReader(data))
@@ -731,6 +832,12 @@ func verifyOTPRequest(data []byte) *http.Request {
 func resetPasswordRequest(email string, data []byte) *http.Request {
 	ctx := context.WithValue(context.Background(), "email", email)
 	request, _ := http.NewRequestWithContext(ctx, "POST", "/auth/reset", bytes.NewReader(data))
+
+	return request
+}
+
+func forgotPasswordRequest(data []byte) *http.Request {
+	request, _ := http.NewRequest("POST", "/auth/forgot-password", bytes.NewReader(data))
 
 	return request
 }

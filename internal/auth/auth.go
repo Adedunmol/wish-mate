@@ -370,7 +370,61 @@ func (h *Handler) ForgotPasswordRequestHandler(responseWriter http.ResponseWrite
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) ForgotPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) ForgotPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	body, problems, err := helpers.DecodeAndValidate[*ForgotPasswordBody](request)
+
+	var clientError helpers.ClientError
+	ok := errors.As(err, &clientError)
+
+	if err != nil && problems == nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", nil))
+		return
+	}
+
+	if err != nil && ok {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid request body", problems))
+		return
+	}
+
+	user, err := h.Store.FindUserByEmail(body.Email)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
+	isValid, err := h.OTPStore.ValidateOTP(body.Email, body.Code)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	if !isValid {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), 10)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	updateBody := UpdateUserBody{Password: string(hashedPassword)}
+
+	_, err = h.Store.UpdateUser(user.ID, updateBody)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	response := Response{
+		Status:  "Success",
+		Message: "Password has been reset successfully",
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
 
 func (h *Handler) ResetPasswordHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	body, problems, err := helpers.DecodeAndValidate[*ResetPasswordBody](request)
