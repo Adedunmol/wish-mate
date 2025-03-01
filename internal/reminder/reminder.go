@@ -31,6 +31,11 @@ type ReminderStore struct {
 	DB *pgx.Conn
 }
 
+func NewReminderStore(db *pgx.Conn) ReminderStore {
+
+	return ReminderStore{DB: db}
+}
+
 func (t *ReminderStore) DeleteReminder(ID int) error {
 	//TODO implement me
 	panic("implement me")
