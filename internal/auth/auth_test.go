@@ -130,6 +130,10 @@ func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
 	return nil
 }
 
+func (s *StubUserStore) UpdateRefreshToken(refreshToken string) error {
+	return nil
+}
+
 type FailingStubUserStore struct {
 	users []auth.User
 }
@@ -170,6 +174,10 @@ func (s *FailingStubUserStore) ComparePasswords(_, _ string) bool {
 }
 
 func (s *FailingStubUserStore) DeleteRefreshToken(refresToken string) error {
+	return nil
+}
+
+func (s *FailingStubUserStore) UpdateRefreshToken(refreshToken string) error {
 	return nil
 }
 

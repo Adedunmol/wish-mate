@@ -49,8 +49,9 @@ type OTP struct {
 
 type UpdateUserBody struct {
 	helpers.Validation
-	Verified bool   `json:"verified"`
-	Password string `json:"password"`
+	Verified     bool   `json:"verified"`
+	Password     string `json:"password"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 type VerifyOTPBody struct {

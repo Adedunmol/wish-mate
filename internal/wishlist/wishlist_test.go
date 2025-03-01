@@ -62,6 +62,10 @@ func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
 	return nil
 }
 
+func (s *StubUserStore) UpdateRefreshToken(refreshToken string) error {
+	return nil
+}
+
 func (s *StubUserStore) UpdateUser(id int, data auth.UpdateUserBody) (auth.User, error) {
 	return auth.User{}, nil
 }

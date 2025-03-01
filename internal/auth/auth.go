@@ -146,6 +146,34 @@ func (h *Handler) LoginUserHandler(responseWriter http.ResponseWriter, request *
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
+
+	refreshToken, err := helpers.GenerateToken(data.ID, data.Email, data.Verified)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
+		return
+	}
+
+	updateUser := UpdateUserBody{RefreshToken: refreshToken}
+
+	if _, err = h.Store.UpdateUser(data.ID, updateUser); err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	expires := time.Now().AddDate(0, 1, 0)
+
+	cookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		Expires:  expires,
+		Secure:   true,
+		HttpOnly: true,
+		MaxAge:   86400,
+	}
+
+	http.SetCookie(responseWriter, cookie)
+
 	response := Response{
 		Status:  "Success",
 		Message: "User logged in",
@@ -230,7 +258,66 @@ func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request 
 	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
 }
 
-func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {}
+func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	refreshToken, err := request.Cookie("refresh_token")
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	data, err := helpers.DecodeToken(refreshToken.Value)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	accessToken, err := helpers.GenerateToken(data["id"].(int), data["email"].(string), data["verified"].(bool))
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
+		return
+	}
+
+	newRefreshToken, err := helpers.GenerateToken(data["id"].(int), data["email"].(string), data["verified"].(bool))
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
+		return
+	}
+
+	err = h.Store.UpdateRefreshToken(newRefreshToken)
+
+	if err != nil && errors.Is(err, helpers.ErrNotFound) {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	expires := time.Now().AddDate(0, 1, 0)
+
+	cookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefreshToken,
+		Path:     "/",
+		Expires:  expires,
+		Secure:   true,
+		HttpOnly: true,
+		MaxAge:   86400,
+	}
+
+	http.SetCookie(responseWriter, cookie)
+
+	response := Response{
+		Status:  "Success",
+		Message: "Access token refreshed successfully",
+		Data:    map[string]interface{}{"token": accessToken, "expiration": helpers.TokenExpiration},
+	}
+
+	helpers.WriteJSONResponse(responseWriter, response, http.StatusOK)
+}
 
 func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	body, problems, err := helpers.DecodeAndValidate[*RequestOTPBody](request)
