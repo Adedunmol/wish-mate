@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/config"
+	"github.com/Adedunmol/wish-mate/internal/database"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/Adedunmol/wish-mate/internal/reminder"
 	"github.com/Adedunmol/wish-mate/internal/routes"
@@ -28,7 +29,7 @@ func main() {
 
 	defer handlePanics()
 
-	db, err := config.ConnectDB()
+	db, err := database.ConnectDB()
 	if err != nil {
 		log.Fatal(errors.Unwrap(err))
 	}
