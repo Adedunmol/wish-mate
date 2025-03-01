@@ -41,11 +41,10 @@ $ docker-compose -f docker-compose.dev.yml up --build -d
 
 4. Migrate the database:
 ```bash
-$ run some script
+$ goose <database driver> <connection string> up
 ```
 
 5. Navigate to this endpoint `http://localhost:{PORT}/docs` to access the docs. PORT is the port defined in the `.env` file.
-
 
 6. To stop the running containers, use:
 ```bash
