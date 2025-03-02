@@ -4,8 +4,8 @@ CREATE TABLE otps (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
     otp VARCHAR(255) NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 );
 -- +goose StatementEnd
 

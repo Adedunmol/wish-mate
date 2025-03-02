@@ -7,7 +7,8 @@ CREATE TABLE items (
     link VARCHAR(255),
     taken BOOLEAN default false,
     created_by SERIAL references users(id),
-    wishlist_id SERIAL references wishlists(id)
+    wishlist_id SERIAL references wishlists(id),
+    created_at TIMESTAMP default NOW()
 );
 -- +goose StatementEnd
 

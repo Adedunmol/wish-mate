@@ -6,7 +6,8 @@ CREATE TABLE wishlists (
     description TEXT,
     notify_before SMALLINT NOT NULL,
     date DATE NOT NULL,
-    created_by SERIAL references users(id)
+    created_by SERIAL references users(id),
+    created_at TIMESTAMP DEFAULT NOW()
 );
 -- +goose StatementEnd
 

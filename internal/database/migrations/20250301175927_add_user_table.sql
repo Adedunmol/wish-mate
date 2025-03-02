@@ -9,7 +9,8 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT false,
     date_of_birth DATE NOT NULL,
-    refresh_token VARCHAR(255)
+    refresh_token VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW()
 );
 -- +goose StatementEnd
 
