@@ -1,9 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TYPE status AS ENUM ('pending', 'accepted', 'blocked')
+CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'blocked');
 
 CREATE TABLE friendships (
-    status status NOT NULL default 'pending',
+    status friendship_status NOT NULL default 'pending',
     user_id INTEGER NOT NULL references users(id),
     friend_id INTEGER NOT NULL references users(id),
     friend_since DATETIME,
@@ -14,5 +14,5 @@ CREATE TABLE friendships (
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE friendships;
-DROP TYPE status;
+DROP TYPE friendship_status;
 -- +goose StatementEnd
