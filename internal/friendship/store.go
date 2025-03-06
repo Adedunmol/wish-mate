@@ -48,6 +48,10 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 		return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return FriendshipResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return friendship, nil
 }
 
@@ -101,6 +105,10 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
 		}
 
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return FriendshipResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
 	return friendship, nil
