@@ -53,4 +53,5 @@ $ docker-compose down
 
 ### Further improvements
 1. Implement users picking items in fractions for the items marked as fractions.
-2. Add OAuth so users can sign up with their Gmail accounts.
+2. Add OAuth so users can sign up with their Gmail accounts without going through the hassle of signing up.
+3. Create custom email (user@wishmate.com) for the application and send mails with custom email.
