@@ -83,7 +83,7 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 	//	UserID:    userData.ID,
 	//	Title:     "Wishlist Reminder",
 	//	Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
-	//	Type:      "wishlist",
+	//	Type:      "wishlist", // reminder or birthday
 	//	ExecuteAt: &scheduledDate,
 	//}
 	//
