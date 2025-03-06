@@ -20,6 +20,7 @@ type Store interface {
 	UpdateItem(wishlistID, itemID int, body *UpdateItem) (ItemResponse, error)
 	PickItem(wishlistID, itemID, userID int) (ItemResponse, error)
 	DeleteItem(wishlistID, itemID int) error
+	CreateItem(userID, wishlistID int, body *Item) (ItemResponse, error)
 }
 
 type WishlistStore struct {
@@ -492,4 +493,28 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 	}
 
 	return nil
+}
+
+func (w *WishlistStore) CreateItem(userID, wishlistID int, body *Item) (ItemResponse, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var item ItemResponse
+
+	query := `INSERT INTO items (name, description, link, created_by, wishlist_id) 
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, link, wishlist_id;`
+
+	err = w.db.QueryRow(ctx, query, body.Name, body.Description, body.Link, userID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.WishlistID)
+	if err != nil {
+		return ItemResponse{}, fmt.Errorf("error inserting wishlist: %w", err)
+	}
+
+	return item, nil
 }

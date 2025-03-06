@@ -25,6 +25,7 @@ func WishlistRoutes(config config.Config) {
 	wishlistRouter.Delete("/{id}", http.HandlerFunc(handler.DeleteWishlist))
 
 	wishlistRouter.Get("/{wishlist_id}/items/{item_id}", http.HandlerFunc(handler.GetItemHandler))
+	wishlistRouter.Post("/{wishlist_id}/items", http.HandlerFunc(handler.CreateItemHandler))
 	wishlistRouter.Delete("/{wishlist_id}/items/{item_id}", http.HandlerFunc(handler.DeleteItemHandler))
 	wishlistRouter.Patch("/{wishlist_id}/items/{item_id}", http.HandlerFunc(handler.UpdateWishlistItemHandler))
 	wishlistRouter.Patch("/{wishlist_id}/items/{item_id}/pick", http.HandlerFunc(handler.PickWishlistItemHandler))

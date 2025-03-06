@@ -62,7 +62,7 @@ func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
 	return nil
 }
 
-func (s *StubUserStore) UpdateRefreshToken(refreshToken string) error {
+func (s *StubUserStore) UpdateRefreshToken(oldRefreshToken, refreshToken string) error {
 	return nil
 }
 
@@ -306,6 +306,10 @@ func (s *StubWishlistStore) PickItem(wishlistID, itemID, userID int) (wishlist.I
 	}
 
 	return wishlist.ItemResponse{}, helpers.ErrNotFound
+}
+
+func (s *StubWishlistStore) CreateItem(userID, wishlistID int, body *wishlist.Item) (wishlist.ItemResponse, error) {
+	return wishlist.ItemResponse{}, nil
 }
 
 func TestCreateWishlist(t *testing.T) {
@@ -1390,6 +1394,8 @@ func TestDeleteItem(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 }
+
+func TestCreateItem(t *testing.T) {}
 
 func assertResponseCode(t *testing.T, got, want int) {
 	t.Helper()
