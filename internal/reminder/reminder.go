@@ -43,6 +43,9 @@ func (t *ReminderStore) DeleteReminder(ID int) error {
 
 func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 
+	// body.Type should either be reminder or birthday
+	// if body.Type is reminder, send reminder mail
+	// if body.Type is birthday, send birthday mail
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
