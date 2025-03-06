@@ -41,10 +41,10 @@ func DecodeToken(tokenString string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("error parsing token: %v", err)
 	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		var data map[string]interface{}
+		data := make(map[string]interface{})
 
 		data["email"] = claims["email"].(string)
-		data["user_id"] = claims["user_id"].(string)
+		data["user_id"] = int(claims["user_id"].(float64))
 		data["verified"] = claims["verified"].(bool)
 		return data, nil
 	}

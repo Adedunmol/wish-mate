@@ -259,32 +259,32 @@ func (h *Handler) LogoutUserHandler(responseWriter http.ResponseWriter, request 
 }
 
 func (h *Handler) RefreshTokenHandler(responseWriter http.ResponseWriter, request *http.Request) {
-	refreshToken, err := request.Cookie("refresh_token")
+	oldRefreshToken, err := request.Cookie("refresh_token")
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
 	}
 
-	data, err := helpers.DecodeToken(refreshToken.Value)
+	data, err := helpers.DecodeToken(oldRefreshToken.Value)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 		return
 	}
 
-	accessToken, err := helpers.GenerateToken(data["id"].(int), data["email"].(string), data["verified"].(bool))
+	accessToken, err := helpers.GenerateToken(data["user_id"].(int), data["email"].(string), data["verified"].(bool))
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
-	newRefreshToken, err := helpers.GenerateToken(data["id"].(int), data["email"].(string), data["verified"].(bool))
+	newRefreshToken, err := helpers.GenerateToken(data["user_id"].(int), data["email"].(string), data["verified"].(bool))
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
-	err = h.Store.UpdateRefreshToken(newRefreshToken)
+	err = h.Store.UpdateRefreshToken(oldRefreshToken.Value, newRefreshToken)
 
 	if err != nil && errors.Is(err, helpers.ErrNotFound) {
 		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)

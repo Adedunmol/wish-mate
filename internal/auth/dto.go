@@ -6,14 +6,15 @@ import (
 )
 
 type User struct {
-	ID          int
-	FirstName   string
-	LastName    string
-	Username    string
-	Email       string
-	Password    string
-	DateOfBirth string
-	Verified    bool
+	ID           int
+	FirstName    string
+	LastName     string
+	Username     string
+	Email        string
+	Password     string
+	DateOfBirth  string
+	Verified     bool
+	RefreshToken string
 }
 
 type CreateUserBody struct {

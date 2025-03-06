@@ -5,11 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/queue"
+	"github.com/golang-jwt/jwt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -130,8 +133,16 @@ func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
 	return nil
 }
 
-func (s *StubUserStore) UpdateRefreshToken(refreshToken string) error {
-	return nil
+func (s *StubUserStore) UpdateRefreshToken(oldRefreshToken, refreshToken string) error {
+
+	for i, u := range s.users {
+		if oldRefreshToken == u.RefreshToken {
+			s.users[i].RefreshToken = refreshToken
+			return nil
+		}
+	}
+
+	return helpers.ErrNotFound
 }
 
 type FailingStubUserStore struct {
@@ -177,7 +188,8 @@ func (s *FailingStubUserStore) DeleteRefreshToken(refresToken string) error {
 	return nil
 }
 
-func (s *FailingStubUserStore) UpdateRefreshToken(refreshToken string) error {
+func (s *FailingStubUserStore) UpdateRefreshToken(oldRefreshToken, refreshToken string) error {
+
 	return nil
 }
 
@@ -804,6 +816,81 @@ func TestForgotPassword(t *testing.T) {
 
 		assertResponseCode(t, response.Code, http.StatusBadRequest)
 	})
+}
+
+func TestRefreshToken(t *testing.T) {
+	store := StubUserStore{users: []auth.User{
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola", RefreshToken: "somerandomtoken"},
+	}}
+	server := &auth.Handler{Store: &store}
+
+	t.Run("return new access token and update old refresh token", func(t *testing.T) {
+		request, token := refreshTokenRequest("adedunmola@gmail.com", 1, true)
+		response := httptest.NewRecorder()
+
+		store.users[0].RefreshToken = token
+
+		server.RefreshTokenHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("return unauthorized if cookie not found", func(t *testing.T) {
+		request, _ := http.NewRequest("POST", "/api/v1/users/refresh-token", nil)
+		response := httptest.NewRecorder()
+
+		server.RefreshTokenHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
+	})
+
+	t.Run("return unauthorized if refresh token is not found in an entry", func(t *testing.T) {
+
+		store := StubUserStore{users: []auth.User{
+			{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola", RefreshToken: "somerandomtokenunique"},
+		}}
+		server := &auth.Handler{Store: &store}
+
+		request, _ := refreshTokenRequest("adedunmola@gmail.com", 1, true)
+		response := httptest.NewRecorder()
+
+		server.RefreshTokenHandler(response, request)
+
+		var got map[string]interface{}
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+
+		assertResponseCode(t, response.Code, http.StatusUnauthorized)
+	})
+}
+
+func refreshTokenRequest(email string, userID int, verified bool) (*http.Request, string) {
+	request, _ := http.NewRequest("POST", "/api/v1/users/refresh-token", nil)
+
+	var signingKey = []byte(os.Getenv("SECRET_KEY"))
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+
+	claims["email"] = email
+	claims["user_id"] = userID
+	claims["verified"] = verified
+	claims["exp"] = time.Now().Add(30 * time.Minute).Unix()
+
+	tokenString, err := token.SignedString(signingKey)
+	if err != nil {
+		fmt.Printf("error generating token: %s", err.Error())
+	}
+
+	cookie := http.Cookie{Name: "refresh_token", Value: tokenString, MaxAge: 10, HttpOnly: true}
+
+	request.AddCookie(&cookie)
+
+	return request, tokenString
 }
 
 func createUserRequest(data []byte) *http.Request {
