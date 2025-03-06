@@ -133,6 +133,10 @@ func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
 	}
 	defer tx.Rollback(ctx)
 
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return User{}, err
 }
 
