@@ -7,17 +7,19 @@ import (
 	"net/http"
 )
 
-func UserRoutes(config config.Config) {
+func FriendshipRoutes(config config.Config) {
 
-	userRouter := chi.NewRouter()
+	friendshipRouter := chi.NewRouter()
 
 	authStore := auth.NewUserStore(config.DB)
 	friendshipStore := NewFriendshipStore(config.DB)
 
 	handler := Handler{AuthStore: authStore, FriendStore: friendshipStore, Queue: config.Queue}
 
-	userRouter.Post("/{user_id}/friend_requests", http.HandlerFunc(handler.SendRequestHandler))
-	userRouter.Patch("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.UpdateRequestHandler))
+	friendshipRouter.Post("/{user_id}/friend_requests", http.HandlerFunc(handler.SendRequestHandler))
+	friendshipRouter.Patch("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.UpdateRequestHandler))
+	friendshipRouter.Get("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.GetRequestHandler))
+	friendshipRouter.Get("/{user_id}/friend_requests", http.HandlerFunc(handler.GetAllRequestsHandler))
 
-	config.Router.Mount("/users", userRouter)
+	config.Router.Mount("/users", friendshipRouter)
 }

@@ -69,7 +69,7 @@ func (s *StubUserStore) DeleteRefreshToken(refreshToken string) error {
 	return nil
 }
 
-func (s *StubUserStore) UpdateRefreshToken(refreshToken string) error {
+func (s *StubUserStore) UpdateRefreshToken(oldRefreshToken, refreshToken string) error {
 	return nil
 }
 

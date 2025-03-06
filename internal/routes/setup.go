@@ -10,6 +10,6 @@ import (
 func SetupRoutes(config config.Config) {
 
 	auth.AuthRoutes(config)
-	friendship.UserRoutes(config)
+	friendship.FriendshipRoutes(config)
 	wishlist.WishlistRoutes(config)
 }
