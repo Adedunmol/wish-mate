@@ -20,7 +20,7 @@ type CreateReminderBody struct {
 }
 
 type Store interface {
-	CreateReminder(body CreateReminderBody) (ReminderResponse, error)
+	CreateReminder(body CreateReminderBody) error
 	GetReminders(currentTime *time.Time) ([]ReminderResponse, error)
 	GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error)
 	UpdateReminder(ID int) error
@@ -41,8 +41,60 @@ func (t *ReminderStore) DeleteReminder(ID int) error {
 	panic("implement me")
 }
 
-func (t *ReminderStore) CreateReminder(body CreateReminderBody) (ReminderResponse, error) {
-	return ReminderResponse{}, nil
+func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := t.DB.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+	SELECT f.friend_id FROM friendships f
+	WHERE f.user_id = $1 AND f.status = 'accepted';
+	`
+
+	rows, err := t.DB.Query(ctx, query, body.UserID)
+
+	defer rows.Close()
+
+	friendIDs := make([]int, 0)
+	for rows.Next() {
+		var friendID int
+		if err := rows.Scan(&friendID); err != nil {
+			return fmt.Errorf("scan friend: %w", err)
+		}
+		friendIDs = append(friendIDs, friendID)
+	}
+
+	// Create reminders for friends
+	for _, friendID := range friendIDs {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO reminders (name, user_id, title, body, type, execute_at)
+			VALUES ($1, $2, $3, $4, $5, $6);
+		`, body.Name, friendID, body.Title, body.Body, body.Type, body.ExecuteAt)
+		if err != nil {
+			return fmt.Errorf("create reminder for friend %d: %w", friendID, err)
+		}
+	}
+
+	// Optionally create a reminder for the user themselves:
+	_, err = tx.Exec(ctx, `
+		INSERT INTO reminders (name, user_id, title, body, type, execute_at)
+		VALUES ($1, $2, $3, $4, $5, $6);
+	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt)
+	if err != nil {
+		return fmt.Errorf("create user reminder: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	return nil
 }
 
 func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse, error) {
@@ -138,26 +190,26 @@ type ReminderResponse struct {
 	ExecuteAt *time.Time `json:"execute_at"`
 }
 
-func CreateReminder(store Store, body CreateReminderBody) (ReminderResponse, error) {
+func CreateReminder(store Store, body CreateReminderBody) error {
 
 	if body.Name == "" {
-		return ReminderResponse{}, errors.New("empty name")
+		return errors.New("empty name")
 	}
 
 	if body.ExecuteAt == nil {
-		return ReminderResponse{}, errors.New("executeAt is empty")
+		return errors.New("executeAt is empty")
 	}
 	//
 	//if body.Payload == nil {
 	//	return ScheduledTaskResponse{}, errors.New("payload is empty")
 	//}
 
-	task, err := store.CreateReminder(body)
+	err := store.CreateReminder(body)
 	if err != nil {
-		return ReminderResponse{}, fmt.Errorf("error creating a task: %v", err)
+		return fmt.Errorf("error creating a task: %v", err)
 	}
 
-	return task, nil
+	return nil
 }
 
 func GetReminders(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
