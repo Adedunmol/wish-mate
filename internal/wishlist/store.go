@@ -67,6 +67,10 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 		wishlist.Items = append(wishlist.Items, newItem)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return wishlist, nil
 }
 
@@ -267,6 +271,10 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 		return WishlistResponse{}, fmt.Errorf("error updating wishlist: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return wishlist, nil
 }
 
@@ -298,6 +306,10 @@ func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 	_, err = w.db.Exec(ctx, "DELETE FROM wishlists WHERE id = $1", wishlistID)
 	if err != nil {
 		return fmt.Errorf("error deleting wishlist: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
 
 	return nil
@@ -388,6 +400,10 @@ func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (It
 		return ItemResponse{}, fmt.Errorf("error updating item: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return item, nil
 }
 
@@ -429,6 +445,10 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 		return ItemResponse{}, fmt.Errorf("error picking item: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return item, nil
 }
 
@@ -465,6 +485,10 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 
 	if rowsAffected == 0 {
 		return errors.New("item not found in item_picks")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
 
 	return nil
