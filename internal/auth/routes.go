@@ -16,6 +16,13 @@ func AuthRoutes(config config.Config) {
 
 	authRouter.Post("/register", http.HandlerFunc(handler.CreateUserHandler))
 	authRouter.Post("/login", http.HandlerFunc(handler.LoginUserHandler))
+	authRouter.Post("/logout", http.HandlerFunc(handler.LogoutUserHandler))
+	authRouter.Post("/verify", http.HandlerFunc(handler.VerifyUserHandler))
+	authRouter.Get("/refresh-token", http.HandlerFunc(handler.RefreshTokenHandler))
+	authRouter.Post("/request-code", http.HandlerFunc(handler.RequestCodeHandler))
+	authRouter.Post("/forgot-password", http.HandlerFunc(handler.ForgotPasswordHandler))
+	authRouter.Post("/forgot-password-request", http.HandlerFunc(handler.ForgotPasswordRequestHandler))
+	authRouter.Post("/reset-password", http.HandlerFunc(handler.ResetPasswordHandler))
 
 	config.Router.Mount("/auth", authRouter)
 }
