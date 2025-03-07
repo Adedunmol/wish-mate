@@ -131,6 +131,14 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
 
+		_, err = tx.Exec(ctx, `
+        UPDATE reminders SET status = 'scheduled' WHERE id = $1`,
+			reminder.ID)
+
+		if err != nil {
+			return nil, err
+		}
+
 		reminders = append(reminders, reminder)
 	}
 
