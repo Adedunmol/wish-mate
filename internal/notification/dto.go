@@ -7,8 +7,8 @@ type Notification struct {
 	UserID    int        `json:"user_id"` // the receiver's id
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
-	Type      string     `json:"type"`      // alert, update
-	Status    string     `json:"status"`    // read or unread
+	Type      string     `json:"type"` // wishlist_reminder, item_picked, birthday_greeting, friend_request, friend_request_accepted // todo: wishlist_shared, wishlist_expiring
+	Read      bool       `json:"read"`
 	Timestamp *time.Time `json:"timestamp"` // time the notification was created
 }
 

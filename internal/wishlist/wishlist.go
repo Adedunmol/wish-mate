@@ -2,6 +2,7 @@ package wishlist
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/reminder"
@@ -71,27 +72,27 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	// create a scheduleDate using the calculated days before the birthday/due date and create a notification and send mails
-	_, err = helpers.CalculateDaysBefore(wishlist.Date, wishlist.NotifyBefore)
+	scheduledDate, err := helpers.CalculateDaysBefore(wishlist.Date, wishlist.NotifyBefore)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
 	// create a task in the reminder table
-	//taskBody := reminder.CreateTaskBody{
-	//	Name:      "Wishlist",
-	//	UserID:    userData.ID,
-	//	Title:     "Wishlist Reminder",
-	//	Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
-	//	Type:      "wishlist", // reminder or birthday
-	//	ExecuteAt: &scheduledDate,
-	//}
-	//
-	//_, err = h.TaskStore.CreateTask(taskBody)
-	//if err != nil {
-	//	helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
-	//	return
-	//}
+	reminderBody := reminder.CreateReminderBody{
+		Name:      "Wishlist",
+		UserID:    userData.ID,
+		Title:     "Wishlist Reminder",
+		Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
+		Type:      "reminder", // reminder or birthday
+		ExecuteAt: &scheduledDate,
+	}
+
+	err = h.ReminderStore.CreateReminder(reminderBody)
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
 
 	response := Response{
 		Status:  "Success",
