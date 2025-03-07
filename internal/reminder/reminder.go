@@ -15,7 +15,7 @@ type CreateReminderBody struct {
 	UserID    int        `json:"user_id"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
-	Type      string     `json:"type"`
+	Type      string     `json:"type"` // wishlist_reminder // todo: event_reminder
 	ExecuteAt *time.Time `json:"execute_at"`
 }
 
@@ -251,7 +251,7 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 
 	for _, task := range tasks {
 
-		err = q.Enqueue(&queue.TaskPayload{
+		err := q.Enqueue(&queue.TaskPayload{
 			Type: queue.TypeNotificationDelivery,
 			Payload: map[string]interface{}{
 				"id":      task.ID,
