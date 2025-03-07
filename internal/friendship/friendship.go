@@ -2,8 +2,10 @@ package friendship
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"github.com/Adedunmol/wish-mate/internal/notification"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -17,9 +19,10 @@ type Response struct {
 }
 
 type Handler struct {
-	AuthStore   auth.Store
-	FriendStore FriendStore
-	Queue       queue.Queue
+	AuthStore         auth.Store
+	FriendStore       FriendStore
+	Queue             queue.Queue
+	NotificationStore notification.NotificationStore
 }
 
 func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
@@ -55,6 +58,31 @@ func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request
 	data, err := h.FriendStore.CreateFriendship(newUserID, body.RecipientID)
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	email := request.Context().Value("email")
+
+	if email == nil || email == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	userData, err := h.AuthStore.FindUserByEmail(email.(string))
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	_, err = h.NotificationStore.CreateNotification(&notification.CreateNotificationBody{
+		UserID: body.RecipientID,
+		Title:  "Friend request",
+		Body:   fmt.Sprintf("You have a request from %s", userData.Username),
+		Type:   "friend_request",
+	})
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
@@ -114,6 +142,31 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	email := request.Context().Value("email")
+
+	if email == nil || email == "" {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	userData, err := h.AuthStore.FindUserByEmail(email.(string))
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	_, err = h.NotificationStore.CreateNotification(&notification.CreateNotificationBody{
+		UserID: data.FriendID,
+		Title:  "Friend request update",
+		Body:   fmt.Sprintf("You have an update for the request from %s", userData.Username),
+		Type:   "friend_request",
+	})
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
