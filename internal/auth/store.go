@@ -2,8 +2,11 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -33,12 +36,15 @@ func NewUserStore(db *pgx.Conn) *UserStore {
 	return &UserStore{db: db}
 }
 
+const UniqueViolation = "23505"
+
 func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return CreateUserResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -53,11 +59,17 @@ func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 	err = row.Scan(&user.Username, &user.FirstName, &user.LastName, &user.LastName)
 
 	if err != nil {
+		var e *pgconn.PgError
+		if errors.As(err, &e) && e.Code == UniqueViolation {
+			return CreateUserResponse{}, helpers.ErrConflict
+		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return CreateUserResponse{}, fmt.Errorf("error scanning row (insert friendship): %w", err)
 	}
 
 	err = tx.Commit(context.Background())
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return CreateUserResponse{}, fmt.Errorf("error committing transaction: %w", err)
 	}
 
@@ -70,6 +82,7 @@ func (s *UserStore) FindUserByEmail(email string) (User, error) {
 
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -81,11 +94,16 @@ func (s *UserStore) FindUserByEmail(email string) (User, error) {
 	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.DateOfBirth)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, helpers.ErrNotFound
+		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error scanning row (find auth by email): %w", err)
 	}
 
 	err = tx.Commit(context.Background())
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error committing transaction: %w", err)
 	}
 
@@ -98,6 +116,7 @@ func (s *UserStore) FindUserByID(id int) (User, error) {
 
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -113,11 +132,16 @@ func (s *UserStore) FindUserByID(id int) (User, error) {
 	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.DateOfBirth)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, helpers.ErrNotFound
+		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error scanning row (find auth by email): %w", err)
 	}
 
 	err = tx.Commit(context.Background())
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error committing transaction: %w", err)
 	}
 
@@ -129,11 +153,13 @@ func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
 	defer cancel()
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("commit tx: %w", err)
 	}
 
