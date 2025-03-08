@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/auth"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"time"
 )
 
@@ -27,6 +29,8 @@ type WishlistStore struct {
 	db *pgx.Conn
 }
 
+const UniqueViolation = "23505"
+
 func NewWishlistStore(db *pgx.Conn) *WishlistStore {
 
 	return &WishlistStore{db: db}
@@ -39,6 +43,7 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -51,6 +56,7 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 	err = w.db.QueryRow(ctx, query, userID, body.Name, body.Description, body.NotifyBefore, body.Date).
 		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error inserting wishlist: %w", err)
 	}
 
@@ -63,12 +69,14 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 			Scan(&newItem.ID, &newItem.Name, &newItem.Description, &newItem.Link)
 
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return WishlistResponse{}, fmt.Errorf("error inserting item: %w", err)
 		}
 		wishlist.Items = append(wishlist.Items, newItem)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -82,6 +90,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -93,6 +102,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 	err = w.db.QueryRow(ctx, query, wishlistID).
 		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error fetching wishlist: %w", err)
 	}
 
@@ -117,6 +127,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error fetching items: %w", err)
 	}
 	defer rows.Close()
@@ -131,6 +142,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 		err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
 		}
 
@@ -146,6 +158,12 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 		wishlist.Items = append(wishlist.Items, item)
 	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return WishlistResponse{}, nil
 }
 
@@ -155,6 +173,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -166,6 +185,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 	rows, err := w.db.Query(ctx, query, userID)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error fetching wishlists: %w", err)
 	}
 	defer rows.Close()
@@ -174,6 +194,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		var wishlist WishlistResponse
 		err := rows.Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error scanning wishlist: %w", err)
 		}
 
@@ -199,6 +220,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 		itemRows, err := w.db.Query(ctx, itemsQuery, wishlist.ID)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error fetching items: %w", err)
 		}
 		defer itemRows.Close()
@@ -213,6 +235,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 			err := itemRows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
 			if err != nil {
+				err = errors.Join(helpers.ErrInternalServerError, err)
 				return nil, fmt.Errorf("error scanning item: %w", err)
 			}
 
@@ -232,6 +255,11 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		wishlists = append(wishlists, wishlist)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return wishlists, nil
 }
 
@@ -241,6 +269,7 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -251,14 +280,15 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 	var ownerID int
 	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return WishlistResponse{}, errors.New("wishlist not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return WishlistResponse{}, helpers.ErrNotFound
 		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error checking wishlist ownership: %w", err)
 	}
 
 	if ownerID != userID {
-		return WishlistResponse{}, errors.New("forbidden: you do not own this wishlist")
+		return WishlistResponse{}, helpers.ErrForbidden
 	}
 
 	// Update the wishlist with non-empty fields
@@ -269,10 +299,12 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 
 	err = w.db.QueryRow(ctx, query, body.Name, body.Description, wishlistID).Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error updating wishlist: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -285,6 +317,7 @@ func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -293,23 +326,26 @@ func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 	var ownerID int
 	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("wishlist not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return helpers.ErrNotFound
 		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error checking wishlist ownership: %w", err)
 	}
 
 	if ownerID != userID {
-		return errors.New("forbidden: you do not own this wishlist")
+		return helpers.ErrForbidden
 	}
 
 	// Delete the wishlist
 	_, err = w.db.Exec(ctx, "DELETE FROM wishlists WHERE id = $1", wishlistID)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error deleting wishlist: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -322,6 +358,7 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -336,9 +373,10 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 
 	err = w.db.QueryRow(ctx, query, itemID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ItemResponse{}, errors.New("item not found in wishlist")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ItemResponse{}, helpers.ErrNotFound
 		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error retrieving item: %w", err)
 	}
 
@@ -367,6 +405,11 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 		}
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
+	}
+
 	return itemResponse, nil
 }
 
@@ -377,6 +420,7 @@ func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (It
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -395,13 +439,15 @@ func (w *WishlistStore) UpdateItem(wishlistID, itemID int, body *UpdateItem) (It
 		Scan(&item.ID, &item.Name, &item.Description, &item.Link)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ItemResponse{}, errors.New("item not found in wishlist")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ItemResponse{}, helpers.ErrNotFound
 		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error updating item: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -415,6 +461,7 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -426,9 +473,10 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 
 	err = w.db.QueryRow(ctx, "SELECT id FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingItemID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ItemResponse{}, errors.New("item not found in wishlist")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ItemResponse{}, helpers.ErrNotFound
 		}
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error checking item status: %w", err)
 	}
 
@@ -436,17 +484,22 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 
 	err = w.db.QueryRow(ctx, pickedQuery, itemID).Scan(&existingItemID)
 	if err == nil {
-		return ItemResponse{}, errors.New("item already picked by another user")
+		return ItemResponse{}, helpers.ErrConflict
 	}
 
 	query := `INSERT INTO item_picks (item_id, user_id) VALUES ($1, $2) RETURNING id, name, description, link;`
 
 	err = w.db.QueryRow(ctx, query, userID, itemID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
 	if err != nil {
+		var e *pgconn.PgError
+		if errors.As(err, &e) && e.Code == UniqueViolation {
+			return ItemResponse{}, helpers.ErrConflict
+		}
 		return ItemResponse{}, fmt.Errorf("error picking item: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -460,6 +513,7 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -467,28 +521,31 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 	query := "DELETE FROM items WHERE id = $1 AND wishlist_id = $2"
 	result, err := w.db.Exec(ctx, query, itemID, wishlistID)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error deleting item: %w", err)
 	}
 
 	rowsAffected := result.RowsAffected()
 
 	if rowsAffected == 0 {
-		return errors.New("item not found in wishlist")
+		return helpers.ErrNotFound
 	}
 
 	query = "DELETE FROM item_picks WHERE id = $1 AND wishlist_id = $2"
 	result, err = w.db.Exec(ctx, query, itemID, wishlistID)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error deleting item from join table: %w", err)
 	}
 
 	rowsAffected = result.RowsAffected()
 
 	if rowsAffected == 0 {
-		return errors.New("item not found in item_picks")
+		return helpers.ErrNotFound
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -502,6 +559,7 @@ func (w *WishlistStore) CreateItem(userID, wishlistID int, body *Item) (ItemResp
 
 	tx, err := w.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return ItemResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -514,6 +572,11 @@ func (w *WishlistStore) CreateItem(userID, wishlistID int, body *Item) (ItemResp
 	err = w.db.QueryRow(ctx, query, body.Name, body.Description, body.Link, userID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.WishlistID)
 	if err != nil {
 		return ItemResponse{}, fmt.Errorf("error inserting wishlist: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return ItemResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
 	return item, nil
