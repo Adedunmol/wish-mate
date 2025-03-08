@@ -2,7 +2,9 @@ package friendship
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/jackc/pgx/v5"
 	"time"
 )
@@ -29,6 +31,7 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 
 	tx, err := f.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -45,10 +48,12 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 	err = f.db.QueryRow(ctx, query, userID, recipientID).Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
 
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -62,6 +67,7 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 	defer cancel()
 	tx, err := f.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -71,6 +77,7 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 
 	err = f.db.QueryRow(ctx, query, friendshipID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status)
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error getting friendship: %w", err)
 	}
 
@@ -81,6 +88,7 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 
 		err = f.db.QueryRow(ctx, updateQuery, "accepted", time.Now(), friendshipID).Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
 		}
 
@@ -93,6 +101,7 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 		_, err = f.db.Exec(ctx, insertQuery, &friendship.FriendID, &friendship.UserID, time.Now())
 
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
 		}
 	} else {
@@ -102,12 +111,14 @@ func (f *FriendshipStore) UpdateFriendship(friendshipID int, status string) (Fri
 
 		err = f.db.QueryRow(ctx, updateQuery, status, friendshipID).Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.Status)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
 		}
 
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
@@ -121,6 +132,7 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 	defer cancel()
 	tx, err := f.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
@@ -131,6 +143,7 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 	rows, err := f.db.Query(ctx, query, userID, status)
 
 	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error querying friendhips: %v", err)
 	}
 
@@ -139,10 +152,16 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 
 		err = rows.Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.FriendSince)
 		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
 
 		friendships = append(friendships, friendship)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return nil, fmt.Errorf("commit tx: %w", err)
 	}
 
 	return friendships, nil
