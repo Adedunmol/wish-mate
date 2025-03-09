@@ -56,6 +56,11 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		body.Date = userData.DateOfBirth
 	}
 
+	if body.NotifyBefore < 0 {
+		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
 	wishlist := Wishlist{
 		Name:         body.Name,
 		Description:  body.Description,
