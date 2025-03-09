@@ -55,12 +55,6 @@ func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data, err := h.FriendStore.CreateFriendship(newUserID, body.RecipientID)
-	if err != nil {
-		helpers.HandleError(responseWriter, err)
-		return
-	}
-
 	email := request.Context().Value("email")
 
 	if email == nil || email == "" {
@@ -71,6 +65,17 @@ func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request
 	userData, err := h.AuthStore.FindUserByEmail(email.(string))
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
+		return
+	}
+
+	if newUserID != userData.ID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
+	data, err := h.FriendStore.CreateFriendship(newUserID, body.RecipientID)
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
 		return
 	}
 
@@ -121,6 +126,20 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 	newRequestID, err := strconv.Atoi(requestID)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
+	friendshipData, err := h.FriendStore.GetFriendship(newRequestID)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, err)
+		return
+	}
+
+	currentUserID := request.Context().Value("user_id").(int)
+
+	if currentUserID != friendshipData.UserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
 		return
 	}
 
