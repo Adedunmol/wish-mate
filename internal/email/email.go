@@ -12,10 +12,10 @@ import (
 // go to google app passwords and create an app and use the details given
 
 type Email struct {
-	ToAddr   string            `json:"to_addr"`
-	Subject  string            `json:"subject"`
-	Template string            `json:"template"`
-	Vars     map[string]string `json:"vars"`
+	ToAddr   string      `json:"to_addr"`
+	Subject  string      `json:"subject"`
+	Template string      `json:"template"`
+	Vars     interface{} `json:"vars"`
 }
 
 func SendHTMLEmail(to []string, subject, htmlBody string) error {

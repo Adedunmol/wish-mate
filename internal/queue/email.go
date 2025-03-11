@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/email"
 	"github.com/hibiken/asynq"
 	"log"
 )
@@ -35,6 +36,19 @@ func HandleEmailTask(ctx context.Context, t *asynq.Task) error {
 	log.Printf("sending mail to user: %s", payload.Email)
 
 	// send mail to user
+
+	emailData := email.Email{
+		Subject:  payload.Subject,
+		ToAddr:   payload.Email,
+		Template: payload.Template,
+		Vars:     payload.Data,
+	}
+
+	if err := emailData.SendTemplateEmail(); err != nil {
+		err = fmt.Errorf("error sending email to user: %w", err)
+		log.Println(err)
+		return err
+	}
 
 	return nil
 }
