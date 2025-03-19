@@ -1,5 +1,5 @@
 # Build the application from source
-FROM golang:1.21.4 AS build-stage
+FROM golang:latest AS build-stage
 
 WORKDIR /app
 
@@ -7,7 +7,8 @@ COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /wish-mate
+
+RUN CGO_ENABLED=0 GOOS=linux go build -C ./cmd/webserver -o /wish-mate
 
 # Development
 FROM build-stage AS dev-stage

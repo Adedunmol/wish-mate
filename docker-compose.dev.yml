@@ -22,11 +22,13 @@ services:
       - /app/tmp
 
   postgres:
+    env_file: ".env"
     extends:
       service: postgres
       file: docker-compose.base.yml
 
   redis:
+    env_file: ".env"
     extends:
       service: redis
       file: docker-compose.base.yml
