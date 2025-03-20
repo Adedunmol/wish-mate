@@ -7,8 +7,7 @@ COPY . .
 
 RUN go mod download
 
-
-RUN CGO_ENABLED=0 GOOS=linux go build -C ./cmd/webserver -o /wish-mate
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
 
 # Development
 FROM build-stage AS dev-stage

@@ -3,8 +3,8 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  bin = "tmp\\main.exe"
-  cmd = "go build -o ./tmp/main.exe ./cmd/main.go"
+  bin = "tmp/main.exe"
+  cmd = "go build -o ./tmp/main.exe ./cmd/webserver/main.go"
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_regex = ["_test.go"]
   include_ext = ["go", "tpl", "tmpl", "html"]
