@@ -9,6 +9,12 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres-data:/postgres/postgres-data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d wishmate-db" ]
+      interval: 10s   # Check every 10 seconds
+      timeout: 5s     # Fail if it takes longer than 5 seconds
+      retries: 5      # Retry 5 times before marking as unhealthy
+      start_period: 10s # Wait 10s before the first check
 
   redis:
     image: redis

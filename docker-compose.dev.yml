@@ -19,7 +19,7 @@ services:
         condition: on-failure
     volumes:
       - .:/app
-      - /app/tmp
+#      - /app/tmp
 
   postgres:
     env_file: ".env"

@@ -17,12 +17,23 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 )
 
 func main() {
 	ctx := context.Background()
-	err := godotenv.Load()
+
+	// Get the current working directory inside the container
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("error getting working directory:", err)
+	}
+
+	// Load .env from the working directory
+	envPath := filepath.Join(cwd, ".env")
+
+	err = godotenv.Load(envPath)
 	if err != nil {
 		log.Fatalf("error loading .env file: %s", err)
 	}
@@ -31,7 +42,7 @@ func main() {
 
 	db, err := database.ConnectDB()
 	if err != nil {
-		log.Fatal(errors.Unwrap(err))
+		log.Fatal(fmt.Errorf("error connecting to db: %w", err))
 	}
 
 	defer db.Close(ctx)
@@ -41,7 +52,7 @@ func main() {
 
 	qc, err := queue.NewClient(ctxWithTimeout)
 	if err != nil {
-		log.Fatal(errors.Unwrap(err))
+		log.Fatal("error creating new queue client", errors.Unwrap(err))
 	}
 
 	// create a new scheduler

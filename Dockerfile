@@ -1,11 +1,13 @@
 # Build the application from source
-FROM golang:latest AS build-stage
+FROM golang:1.24.1-alpine3.21 AS build-stage
 
 WORKDIR /app
 
-COPY . .
+COPY go.mod go.sum ./
 
 RUN go mod download
+
+COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
 
@@ -13,8 +15,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
 FROM build-stage AS dev-stage
 
 WORKDIR /app
-
-COPY --from=build-stage . .
 
 RUN go install github.com/air-verse/air@latest
 
@@ -36,4 +36,4 @@ EXPOSE 8080
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/wish-mate"]
+ENTRYPOINT ["./tmp/wish-mate"]
