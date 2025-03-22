@@ -96,7 +96,14 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 
 func NewClient(ctx context.Context) (*Client, error) {
 	var qc Client
-	addr, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+
+	redisUrl := os.Getenv("REDIS_URL")
+
+	if redisUrl == "" {
+		return nil, fmt.Errorf("REDIS_URL environment variable not set")
+	}
+
+	addr, err := redis.ParseURL(redisUrl)
 	if err != nil {
 		return &qc, fmt.Errorf("error parsing redis url: %v", err)
 	}

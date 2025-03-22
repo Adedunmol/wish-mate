@@ -11,7 +11,7 @@ services:
     networks:
       - wishnet
     ports:
-      - "${PORT}:5000"
+      - ${PORT}:5000
     env_file: ".env"
     command: air -c .air.toml
     deploy:

@@ -30,6 +30,7 @@ func main() {
 		log.Fatal("error getting working directory:", err)
 	}
 
+	log.Println("current working directory: ", cwd)
 	// Load .env from the working directory
 	envPath := filepath.Join(cwd, ".env")
 
@@ -52,13 +53,13 @@ func main() {
 
 	qc, err := queue.NewClient(ctxWithTimeout)
 	if err != nil {
-		log.Fatal("error creating new queue client", errors.Unwrap(err))
+		log.Fatal(fmt.Errorf("error creating new queue client: %w", err))
 	}
 
 	// create a new scheduler
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		log.Fatal(fmt.Errorf("error starting gocron scheduler: %v", errors.Unwrap(err)))
+		log.Fatal(fmt.Errorf("error starting gocron scheduler: %w", err))
 	}
 
 	// schedule a task to run every minute
@@ -69,7 +70,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		log.Fatalf("failed to schedule job: %v", errors.Unwrap(err))
+		log.Fatalf("failed to schedule job: %w", err)
 	}
 
 	go scheduler.Start()
@@ -88,7 +89,7 @@ func main() {
 	go func() {
 		log.Printf("starting web server on port %d", os.Getenv("PORT"))
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatalf("error starting web server on port %d: %v", os.Getenv("PORT"), err)
+			log.Fatalf("error starting web server on port %d: %w", os.Getenv("PORT"), err)
 		}
 	}()
 
