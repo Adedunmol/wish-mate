@@ -110,7 +110,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 
 	qc.once.Do(func() {
 		log.Printf("setting up connection for asynq redis queue")
-
+		log.Println("redis addr: ", addr)
 		qc.client = asynq.NewClient(asynq.RedisClientOpt{Addr: addr.Addr, Password: "", DB: 0})
 	})
 

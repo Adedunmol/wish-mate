@@ -19,4 +19,9 @@ services:
   redis:
     image: redis
     ports:
-      - ${REDIS_PORT}:6379
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5

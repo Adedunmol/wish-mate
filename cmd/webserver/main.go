@@ -85,11 +85,16 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	server := &http.Server{Addr: fmt.Sprintf(":%d", os.Getenv("PORT")), Handler: r}
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8080"
+	}
+	server := &http.Server{Addr: fmt.Sprintf(":%s", port), Handler: r}
 	go func() {
-		log.Printf("starting web server on port %d", os.Getenv("PORT"))
+		log.Printf("starting web server on port %s", port)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatalf("error starting web server on port %d: %w", os.Getenv("PORT"), err)
+			log.Fatal(fmt.Errorf("error starting web server on port %s: %w", port, err))
 		}
 	}()
 
@@ -125,13 +130,13 @@ func enqueueReminders(client *queue.Client, db *pgx.Conn) {
 	log.Printf("checking due scheduled reminders at: %v", currentTime.UTC())
 
 	if err := reminder.EnqueueReminders(taskStore, client, &currentTime); err != nil {
-		log.Printf(errors.Unwrap(err).Error())
+		log.Print(fmt.Errorf("error enqeueing reminder: %w", err))
 	}
 
 	// get today's birthdays and send notifications and mails to their friends
 	log.Printf("checking birthdays due today: %v", currentTime.UTC())
 
 	if err := reminder.EnqueueBirthdays(taskStore, client, &currentTime); err != nil {
-		log.Printf(errors.Unwrap(err).Error())
+		log.Print(fmt.Errorf("error enqeueing birthdays: %w", err))
 	}
 }

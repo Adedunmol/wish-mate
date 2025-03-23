@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"log"
 	"os"
 )
 
@@ -24,6 +25,8 @@ func ConnectDB() (*pgx.Conn, error) {
 	if err := conn.Ping(context.Background()); err != nil {
 		return nil, fmt.Errorf("error pinging database: %v", err)
 	}
+
+	log.Print("connected to the database")
 
 	return conn, nil
 }
