@@ -37,8 +37,27 @@ func NewReminderStore(db *pgx.Conn) ReminderStore {
 }
 
 func (t *ReminderStore) DeleteReminder(ID int) error {
-	//TODO implement me
-	panic("implement me")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := t.DB.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+	DELETE FROM reminders WHERE id = $1;
+	`
+
+	_, err = t.DB.Query(ctx, query, ID)
+
+	if err != nil {
+		return fmt.Errorf("error deleting reminder: %w", err)
+	}
+
+	return nil
 }
 
 func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
