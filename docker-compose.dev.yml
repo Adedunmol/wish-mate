@@ -5,6 +5,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     build:
       context: .
       target: dev-stage
@@ -34,6 +36,16 @@ services:
     extends:
       service: redis
       file: docker-compose.base.yml
+
+  migrations:
+    image: ghcr.io/kukymbr/goose-docker:3.24.1
+    env_file: ".env"
+    volumes:
+      - ./internal/database/migrations:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 
 volumes:
   postgres-data:
