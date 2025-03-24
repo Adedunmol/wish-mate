@@ -9,6 +9,8 @@ RUN go mod download
 
 COPY . .
 
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
 RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
 
 # Development
@@ -18,7 +20,7 @@ WORKDIR /app
 
 RUN go install github.com/air-verse/air@latest
 
-CMD ["air", "-c", ".air.toml"]
+CMD ["sh", "-c", "until pg_isready -h $POSTGRES_HOST -p 5432; do sleep 2; done && goose up && air -c .air.toml"]
 
 
 # Run the tests in the container
@@ -31,6 +33,8 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 WORKDIR /
 
 COPY --from=build-stage /wish-mate /wish-mate
+
+RUN goose up
 
 EXPOSE 8080
 

@@ -40,8 +40,9 @@ $ docker-compose -f docker-compose.dev.yml up --build -d
 ```
 
 4. Migrate the database:
+Set the database driver and connection string by setting GOOSE_DRIVER and GOOSE_DBSTRING in the .env file
 ```bash
-$ goose <database driver> <connection string> up
+$ goose up
 ```
 
 5. Navigate to this endpoint `http://localhost:{PORT}/docs` to access the docs. PORT is the port defined in the `.env` file.
