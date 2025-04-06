@@ -6,7 +6,7 @@ CREATE TABLE friendships (
     status friendship_status NOT NULL default 'pending',
     user_id INTEGER NOT NULL references users(id),
     friend_id INTEGER NOT NULL references users(id),
-    friend_since DATETIME,
+    friend_since TIMESTAMP,
     PRIMARY KEY (user_id, friend_id)
 );
 -- +goose StatementEnd

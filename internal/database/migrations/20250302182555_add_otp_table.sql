@@ -5,7 +5,7 @@ CREATE TABLE otps (
     email VARCHAR(255) NOT NULL,
     otp VARCHAR(255) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 -- +goose StatementEnd
 
