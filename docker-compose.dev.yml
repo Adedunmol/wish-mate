@@ -47,12 +47,9 @@ services:
     depends_on:
       - postgres
     entrypoint: ["goose", "up"]
-#    entrypoint: >
-#      sh -c "
-#        echo 'Waiting for DB...' &&
-#        until pg_isready -h db -U postgres; do sleep 1; done &&
-#        goose up
-#      "
+    networks:
+      - wishnet
+
 #  migrations:
 #    image: ghcr.io/kukymbr/goose-docker:3.24.1
 #    env_file: ".env"
