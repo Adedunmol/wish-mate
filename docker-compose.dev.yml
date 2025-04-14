@@ -5,8 +5,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+#    entrypoint: [ "sh", "-c", "until pg_isready -h postgres -U postgres; do sleep 1; done && goose up && ./your-app-binary" ]
+
+    #      migrations:
+#        condition: service_completed_successfully
     build:
       context: .
       target: dev-stage
@@ -37,16 +39,30 @@ services:
       service: redis
       file: docker-compose.base.yml
 
-  migrations:
-    image: ghcr.io/kukymbr/goose-docker:3.24.1
+  migrator:
+    build:
+      context: .
+      target: dev-stage
     env_file: ".env"
-    volumes:
-      - ./internal/database/migrations:/migrations
     depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - wishnet
+      - postgres
+    entrypoint: ["goose", "up"]
+#    entrypoint: >
+#      sh -c "
+#        echo 'Waiting for DB...' &&
+#        until pg_isready -h db -U postgres; do sleep 1; done &&
+#        goose up
+#      "
+#  migrations:
+#    image: ghcr.io/kukymbr/goose-docker:3.24.1
+#    env_file: ".env"
+#    volumes:
+#      - ./internal/database/migrations:/migrations
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    networks:
+#      - wishnet
 
 
 volumes:

@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-#RUN #go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
 
@@ -20,7 +20,6 @@ WORKDIR /app
 
 RUN go install github.com/air-verse/air@latest
 
-#CMD ["sh", "-c", "until pg_isready -h $POSTGRES_HOST -p 5432; do sleep 2; done && goose up && air -c .air.toml"]
 CMD ["air -c .air.toml"]
 
 
@@ -33,7 +32,7 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 
 WORKDIR /
 
-COPY --from=build-stage /wish-mate /wish-mate
+COPY --from=build-stage /app/tmp/main.exe /tmp/wish-mate
 
 EXPOSE 8080
 
