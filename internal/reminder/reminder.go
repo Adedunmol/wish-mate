@@ -176,7 +176,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT id, user_id, 'Happy Birthday!' AS title, 
+		SELECT id, 'Happy Birthday!' AS title, 
        		'Wishing you a wonderful day filled with joy!' AS body, 
        		'birthday' AS type, 'pending' AS status, email 
 		FROM users 
@@ -194,7 +194,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	for rows.Next() {
 		var reminder ReminderResponse
 
-		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Email)
+		err = rows.Scan(&reminder.UserID, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
