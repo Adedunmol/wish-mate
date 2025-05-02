@@ -4,6 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"time"
+
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/database"
 	"github.com/Adedunmol/wish-mate/internal/queue"
@@ -13,12 +20,6 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"time"
 )
 
 func main() {
@@ -126,17 +127,17 @@ func enqueueReminders(client *queue.Client, db *pgx.Conn) {
 	currentTime := time.Now()
 	taskStore := &reminder.ReminderStore{DB: db}
 
-	// check db for reminders where scheduled = pending AND scheduled_at <= now
-	log.Printf("checking due scheduled reminders at: %v", currentTime.UTC())
-
-	if err := reminder.EnqueueReminders(taskStore, client, &currentTime); err != nil {
-		log.Print(fmt.Errorf("error enqeueing reminder: %w", err))
-	}
-
 	// get today's birthdays and send notifications and mails to their friends
 	log.Printf("checking birthdays due today: %v", currentTime.UTC())
 
 	if err := reminder.EnqueueBirthdays(taskStore, client, &currentTime); err != nil {
 		log.Print(fmt.Errorf("error enqeueing birthdays: %w", err))
+	}
+
+	// check db for reminders where scheduled = pending AND scheduled_at <= now
+	log.Printf("checking due scheduled reminders at: %v", currentTime.UTC())
+
+	if err := reminder.EnqueueReminders(taskStore, client, &currentTime); err != nil {
+		log.Print(fmt.Errorf("error enqeueing reminder: %w", err))
 	}
 }
