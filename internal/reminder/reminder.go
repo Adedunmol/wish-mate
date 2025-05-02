@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Adedunmol/wish-mate/internal/queue"
-	"github.com/jackc/pgx/v5"
 	"log"
 	"time"
+
+	"github.com/Adedunmol/wish-mate/internal/queue"
+	"github.com/jackc/pgx/v5"
 )
 
 type CreateReminderBody struct {
+	Template  string     `json:"template"`
 	Name      string     `json:"name"`
 	UserID    int        `json:"user_id"`
 	Title     string     `json:"title"`
@@ -95,9 +97,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	// Create reminders for friends
 	for _, friendID := range friendIDs {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO reminders (name, user_id, title, body, type, execute_at)
-			VALUES ($1, $2, $3, $4, $5, $6);
-		`, body.Name, friendID, body.Title, body.Body, body.Type, body.ExecuteAt)
+			INSERT INTO reminders (name, user_id, title, body, type, execute_at, template)
+			VALUES ($1, $2, $3, $4, $5, $6, $7);
+		`, body.Name, friendID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template)
 		if err != nil {
 			return fmt.Errorf("create reminder for friend %d: %w", friendID, err)
 		}
@@ -105,9 +107,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 
 	// Optionally create a reminder for the user themselves:
 	_, err = tx.Exec(ctx, `
-		INSERT INTO reminders (name, user_id, title, body, type, execute_at)
-		VALUES ($1, $2, $3, $4, $5, $6);
-	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt)
+		INSERT INTO reminders (name, user_id, title, body, type, execute_at, template)
+		VALUES ($1, $2, $3, $4, $5, $6, $7);
+	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template)
 	if err != nil {
 		return fmt.Errorf("create user reminder: %w", err)
 	}
@@ -132,7 +134,7 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 
 	// add inner join to get the user_id friends (id, email), which the notifications and emails are going to be sent
 	query := `
-		SELECT id, user_id, title, body, execute_at FROM reminders WHERE execute_at <= NOW();
+		SELECT id, user_id, email, title, body, type, status, execute_at, template FROM reminders WHERE execute_at <= NOW();
 `
 	var reminders []ReminderResponse
 
@@ -145,7 +147,7 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 	for rows.Next() {
 		var reminder ReminderResponse
 
-		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt)
+		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Template)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
@@ -165,7 +167,6 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 }
 
 func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -176,33 +177,76 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT id, 'Happy Birthday!' AS title, 
-       		'Wishing you a wonderful day filled with joy!' AS body, 
-       		'birthday' AS type, 'pending' AS status, email 
-		FROM users 
-		WHERE DATE_PART('month', birthdate) = DATE_PART('month', NOW()) 
-		AND DATE_PART('day', birthdate) = DATE_PART('day', NOW());
-`
-	var birthdayReminders []ReminderResponse
+		SELECT 
+			f.friend_id AS user_id, 
+			u2.email AS email,
+			u1.id AS birthday_user_id,
+			u1.first_name || ' ' || u1.last_name AS birthday_user_name
+		FROM friendships f
+		JOIN users u1 ON u1.id = f.user_id
+		JOIN users u2 ON u2.id = f.friend_id
+		WHERE f.status = 'accepted'
+		AND DATE_PART('month', u1.date_of_birth) = DATE_PART('month', NOW())
+		AND DATE_PART('day', u1.date_of_birth) = DATE_PART('day', NOW());
+	`
 
-	rows, err := t.DB.Query(ctx, query)
-
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying users for birthdays: %v", err)
 	}
+	defer rows.Close()
+
+	var reminders []ReminderResponse
+	// now := time.Now()
+
+	insertQuery := `
+		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id;
+	`
 
 	for rows.Next() {
-		var reminder ReminderResponse
+		var userID int
+		var email string
+		var birthdayUserID int
+		var birthdayUserName string
 
-		err = rows.Scan(&reminder.UserID, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.Email)
+		err := rows.Scan(&userID, &email, &birthdayUserID, &birthdayUserName)
 		if err != nil {
-			return nil, fmt.Errorf("error scanning rows: %w", err)
+			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
 
-		birthdayReminders = append(birthdayReminders, reminder)
+		title := "🎉 It's " + birthdayUserName + "'s Birthday!"
+		body := "Wish " + birthdayUserName + " a fantastic birthday today!"
+		reminderType := "birthday"
+		status := "pending"
+		template := "birthday_reminder.html" // your HTML file name
+
+		var id int
+		err = tx.QueryRow(ctx, insertQuery,
+			userID, email, title, body, reminderType, status, template, currentTime).Scan(&id)
+		if err != nil {
+			return nil, fmt.Errorf("error inserting reminder: %w", err)
+		}
+
+		reminders = append(reminders, ReminderResponse{
+			ID:        id,
+			UserID:    userID,
+			Email:     email,
+			Title:     title,
+			Body:      body,
+			Type:      reminderType,
+			Status:    status,
+			Template:  template,
+			ExecuteAt: currentTime,
+		})
 	}
 
-	return birthdayReminders, nil
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return reminders, nil
 }
 
 func (t *ReminderStore) UpdateReminder(ID int) error {
@@ -212,11 +256,12 @@ func (t *ReminderStore) UpdateReminder(ID int) error {
 type ReminderResponse struct {
 	ID        int        `json:"id"`
 	UserID    int        `json:"user_id"`
-	Email     int        `json:"email"`
+	Email     string     `json:"email"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
 	Type      string     `json:"type"`
 	Status    string     `json:"status"`
+	Template  string     `json:"template"`
 	ExecuteAt *time.Time `json:"execute_at"`
 }
 
