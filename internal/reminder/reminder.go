@@ -14,6 +14,7 @@ import (
 type CreateReminderBody struct {
 	Template  string     `json:"template"`
 	Name      string     `json:"name"`
+	Email     string     `json:"email"`
 	UserID    int        `json:"user_id"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
@@ -64,9 +65,6 @@ func (t *ReminderStore) DeleteReminder(ID int) error {
 
 func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 
-	// body.Type should either be reminder or birthday
-	// if body.Type is reminder, send reminder mail
-	// if body.Type is birthday, send birthday mail
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -77,39 +75,49 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	defer tx.Rollback(ctx)
 
 	query := `
-	SELECT f.friend_id FROM friendships f
-	WHERE f.user_id = $1 AND f.status = 'accepted';
+	SELECT f.friend_id, u.email FROM friendships f
+	WHERE f.user_id = $1 AND f.status = 'accepted'
+	JOIN users u ON u.id = f.friend_id;
 	`
 
 	rows, err := t.DB.Query(ctx, query, body.UserID)
 
+	if err != nil {
+		return fmt.Errorf("error querying friendships (reminders): %w", err)
+	}
+
 	defer rows.Close()
 
-	friendIDs := make([]int, 0)
+	type friend struct {
+		Email string
+		ID    int
+	}
+
+	friends := make([]friend, 0)
 	for rows.Next() {
-		var friendID int
-		if err := rows.Scan(&friendID); err != nil {
+		var friendData friend
+		if err := rows.Scan(&friendData.ID, &friendData.Email); err != nil {
 			return fmt.Errorf("scan friend: %w", err)
 		}
-		friendIDs = append(friendIDs, friendID)
+		friends = append(friends, friendData)
 	}
 
 	// Create reminders for friends
-	for _, friendID := range friendIDs {
+	for _, friend := range friends {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO reminders (name, user_id, title, body, type, execute_at, template)
+			INSERT INTO reminders (name, user_id, title, body, type, execute_at, template, email)
 			VALUES ($1, $2, $3, $4, $5, $6, $7);
-		`, body.Name, friendID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template)
+		`, body.Name, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email)
 		if err != nil {
-			return fmt.Errorf("create reminder for friend %d: %w", friendID, err)
+			return fmt.Errorf("create reminder for friend %d: %w", friend.ID, err)
 		}
 	}
 
 	// Optionally create a reminder for the user themselves:
 	_, err = tx.Exec(ctx, `
-		INSERT INTO reminders (name, user_id, title, body, type, execute_at, template)
+		INSERT INTO reminders (name, user_id, title, body, type, execute_at, template, email)
 		VALUES ($1, $2, $3, $4, $5, $6, $7);
-	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template)
+	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, body.Email)
 	if err != nil {
 		return fmt.Errorf("create user reminder: %w", err)
 	}
@@ -132,7 +140,6 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 	}
 	defer tx.Rollback(ctx)
 
-	// add inner join to get the user_id friends (id, email), which the notifications and emails are going to be sent
 	query := `
 		SELECT id, user_id, email, title, body, type, status, execute_at, template FROM reminders WHERE execute_at <= NOW();
 `
