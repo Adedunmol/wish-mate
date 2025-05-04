@@ -48,7 +48,7 @@ func parseTemplate(data Email) (bytes.Buffer, error) {
 	}
 
 	var rendered bytes.Buffer
-	if err := tmpl.Execute(&rendered, data); err != nil {
+	if err := tmpl.Execute(&rendered, data.Vars); err != nil {
 		return bytes.Buffer{}, fmt.Errorf("error executing template: %v", err)
 	}
 
