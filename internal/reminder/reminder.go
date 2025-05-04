@@ -227,7 +227,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		body := "Wish " + birthdayUserName + " a fantastic birthday today!"
 		reminderType := "birthday"
 		status := "pending"
-		template := "birthday_reminder.html" // your HTML file name
+		template := "birthday_reminder_mail.html" // your HTML file name
 
 		var id int
 		err = tx.QueryRow(ctx, insertQuery,
@@ -393,7 +393,7 @@ func EnqueueBirthdays(store Store, q queue.Queue, currentTime *time.Time) error 
 		err = q.Enqueue(&queue.TaskPayload{
 			Type: queue.TypeEmailDelivery,
 			Payload: map[string]interface{}{
-				"template": "birthday_mail",
+				"template": task.Template,
 				"subject":  "Birthday",
 				"email":    task.Email,
 				"data":     "",

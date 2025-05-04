@@ -85,6 +85,8 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 
 	// create a task in the reminder table
 	reminderBody := reminder.CreateReminderBody{
+		Template:  "wishlist_reminder_mail",
+		Email:     userData.Email,
 		Name:      "Wishlist",
 		UserID:    userData.ID,
 		Title:     "Wishlist Reminder",
