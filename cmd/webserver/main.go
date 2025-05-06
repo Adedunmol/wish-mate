@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"log"
 	"net/http"
 	"os"
@@ -63,28 +64,19 @@ func main() {
 		log.Fatal(fmt.Errorf("error starting gocron scheduler: %w", err))
 	}
 
-	// schedule a task to run every minute
-	_, err = scheduler.NewJob(
-		gocron.DurationJob(time.Minute),
-		gocron.NewTask(func() {
-			enqueueReminders(qc, db)
-		}),
-	)
-	if err != nil {
-		log.Fatalf("failed to schedule job: %w", err)
-	}
-
-	go scheduler.Start()
-
 	r := chi.NewRouter()
 
+	r.Use(middlewares.LoggingMiddleware)
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		fmt.Fprintf(w, "Hello from wishmate API")
+	})
+
 	routes.SetupRoutes(config.Config{DB: db, Router: r, Queue: qc})
-
-	go qc.Run(ctx, db)
-
-	// handle graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
 
 	port := os.Getenv("PORT")
 
@@ -98,6 +90,25 @@ func main() {
 			log.Fatal(fmt.Errorf("error starting web server on port %s: %w", port, err))
 		}
 	}()
+
+	// schedule a task to run every minute
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(time.Duration(10)*time.Minute),
+		gocron.NewTask(func() {
+			enqueueReminders(qc, db)
+		}),
+	)
+	if err != nil {
+		log.Fatalf("failed to schedule job: %w", err)
+	}
+
+	go scheduler.Start()
+
+	go qc.Run(ctx, db)
+
+	// handle graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
 
 	<-stop
 
