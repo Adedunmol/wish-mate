@@ -5,15 +5,12 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/friendship"
-	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"log"
 	"net/http"
 )
 
 func SetupRoutes(config config.Config) {
-
-	config.Router.Use(middlewares.LoggingMiddleware)
 
 	config.Router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 
