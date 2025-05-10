@@ -19,12 +19,12 @@ type User struct {
 
 type CreateUserBody struct {
 	helpers.Validation
-	FirstName string `json:"first_name" validate:"required"`
-	LastName  string `json:"last_name" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	Username  string `json:"username" validate:"required"`
-	Email     string `json:"email" validate:"required,email"`
-	// date of birth
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	Password    string `json:"password" validate:"required"`
+	Username    string `json:"username" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	DateOfBirth string `json:"date_of_birth" validate:"required,date"`
 }
 
 type LoginUserBody struct {

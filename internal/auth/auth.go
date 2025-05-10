@@ -42,6 +42,13 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
+	dob, err := time.Parse("2006-01-02", body.DateOfBirth)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid date_of_birth", nil))
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
 
 	if err != nil {
@@ -50,6 +57,7 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 	}
 
 	body.Password = string(hashedPassword)
+	body.DateOfBirth = dob.String()
 
 	data, err := h.Store.CreateUser(body)
 	if err != nil {
