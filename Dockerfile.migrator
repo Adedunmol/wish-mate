@@ -1,0 +1,10 @@
+# Dockerfile.migrator
+FROM golang:1.24.1-alpine3.21
+
+WORKDIR /migrator
+
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+COPY ./internal/database/migrations ./migrations
+
+RUN ls -la .

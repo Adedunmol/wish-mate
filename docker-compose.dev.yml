@@ -41,13 +41,24 @@ services:
   migrator:
     build:
       context: .
-      target: dev-stage
+      dockerfile: Dockerfile.migrator
     env_file: ".env"
     depends_on:
-      - postgres
-    entrypoint: ["goose", "up"]
+      postgres:
+        condition: service_healthy
     networks:
       - wishnet
+    entrypoint: ["goose", "up"]
+#  migrator:
+#    build:
+#      context: .
+#      target: dev-stage
+#    env_file: ".env"
+#    depends_on:
+#      - postgres
+#    entrypoint: ["goose", "up"]
+#    networks:
+#      - wishnet
 
 volumes:
   postgres-data:
