@@ -24,7 +24,7 @@ type CreateUserBody struct {
 	Password    string `json:"password" validate:"required"`
 	Username    string `json:"username" validate:"required"`
 	Email       string `json:"email" validate:"required,email"`
-	DateOfBirth string `json:"date_of_birth" validate:"required,date"`
+	DateOfBirth string `json:"date_of_birth" validate:"required"`
 }
 
 type LoginUserBody struct {

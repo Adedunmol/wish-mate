@@ -18,9 +18,11 @@ FROM build-stage AS dev-stage
 
 WORKDIR /app
 
-RUN go install github.com/air-verse/air@latest
+#RUN go install github.com/air-verse/air@latest
 
-CMD ["air -c .air.toml"]
+#CMD ["air -c .air.toml"]
+
+ENTRYPOINT ["./tmp/main.exe"]
 
 
 # Run the tests in the container

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -64,6 +65,9 @@ func NewHTTPError(err error, status int, message string, problems map[string][]s
 
 func HandleError(responseWriter http.ResponseWriter, err error) {
 	var clientError ClientError
+
+	log.Println(err)
+
 	ok := errors.As(err, &clientError)
 	if !ok {
 		body := struct {

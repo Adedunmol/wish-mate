@@ -51,12 +51,16 @@ func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 
 	var user CreateUserResponse
 
+	dob, _ := time.Parse("2006-01-02", body.DateOfBirth)
+
+	formattedDOB := dob.Format("2006-01-02")
+
 	row := tx.QueryRow(
 		ctx,
-		"INSERT INTO users (username, first_name, last_name, password) VALUES ($1, $2, $3, $4) RETURNING username, first_name, last_name;",
-		body.Username, body.FirstName, body.LastName, body.Password)
+		"INSERT INTO users (email, username, first_name, last_name, password, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, first_name, last_name;",
+		body.Email, body.Username, body.FirstName, body.LastName, body.Password, formattedDOB)
 
-	err = row.Scan(&user.Username, &user.FirstName, &user.LastName, &user.LastName)
+	err = row.Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.LastName)
 
 	if err != nil {
 		var e *pgconn.PgError
@@ -64,7 +68,7 @@ func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 			return CreateUserResponse{}, helpers.ErrConflict
 		}
 		err = errors.Join(helpers.ErrInternalServerError, err)
-		return CreateUserResponse{}, fmt.Errorf("error scanning row (insert friendship): %w", err)
+		return CreateUserResponse{}, fmt.Errorf("error scanning row (create user): %w", err)
 	}
 
 	err = tx.Commit(context.Background())
