@@ -11,7 +11,7 @@ COPY . .
 
 #RUN #go install github.com/pressly/goose/v3/cmd/goose@latest
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main.exe ./cmd/webserver/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./main.exe ./cmd/webserver/main.go
 
 # Development
 FROM build-stage AS dev-stage
@@ -22,7 +22,7 @@ WORKDIR /app
 
 #CMD ["air -c .air.toml"]
 
-ENTRYPOINT ["./tmp/main.exe"]
+ENTRYPOINT ["./main.exe"]
 
 
 # Run the tests in the container
@@ -34,10 +34,10 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 
 WORKDIR /
 
-COPY --from=build-stage /app/tmp/main.exe /tmp/wish-mate
+COPY --from=build-stage /app/main.exe /wish-mate
 
 EXPOSE 8080
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["./tmp/wish-mate"]
+ENTRYPOINT ["./wish-mate"]

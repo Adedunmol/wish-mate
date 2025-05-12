@@ -18,12 +18,12 @@ services:
     ports:
       - ${PORT}:5000
     env_file: ".env"
-    command: air -c .air.toml
+#    command: air -c .air.toml
     deploy:
       restart_policy:
         condition: on-failure
-    volumes:
-      - .:/app
+#    volumes:
+#      - .:/app
 #      - /app/tmp
 
   postgres:
