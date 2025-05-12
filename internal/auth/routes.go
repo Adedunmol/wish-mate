@@ -11,8 +11,9 @@ func AuthRoutes(config config.Config) {
 	authRouter := chi.NewRouter()
 
 	store := NewUserStore(config.DB)
+	otpStore := NewOTPStore(config.DB)
 
-	handler := Handler{Store: store, Queue: config.Queue}
+	handler := Handler{Store: store, Queue: config.Queue, OTPStore: otpStore}
 
 	authRouter.Post("/register", http.HandlerFunc(handler.CreateUserHandler))
 	authRouter.Post("/login", http.HandlerFunc(handler.LoginUserHandler))

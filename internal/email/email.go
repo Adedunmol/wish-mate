@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -42,7 +43,14 @@ func SendHTMLEmail(to []string, subject, htmlBody string) error {
 
 func parseTemplate(data Email) (bytes.Buffer, error) {
 
-	tmpl, err := template.ParseFiles("../templates/" + data.Template + ".html")
+	tmplDir := os.Getenv("TEMPLATES_DIR")
+	if tmplDir == "" {
+		tmplDir = "./templates" // fallback
+	}
+
+	templatePath := filepath.Join(tmplDir, data.Template+".html")
+
+	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		return bytes.Buffer{}, fmt.Errorf("error parsing template: %v", err)
 	}

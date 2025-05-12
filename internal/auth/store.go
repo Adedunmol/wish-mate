@@ -27,6 +27,57 @@ type Store interface {
 	DeleteRefreshToken(refreshToken string) error
 }
 
+type OTPRepo struct {
+	db *pgx.Conn
+}
+
+func NewOTPStore(db *pgx.Conn) *OTPRepo {
+
+	return &OTPRepo{db: db}
+}
+
+func (o *OTPRepo) CreateOTP(email string, code string, expiration int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := o.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Prepare the insert query
+	query := `
+		INSERT INTO otps (email, otp, expires_at)
+		VALUES ($1, $2, $3)
+	`
+
+	otpExpiration := time.Now().Add(time.Duration(expiration) * time.Minute)
+
+	_, err = tx.Exec(ctx, query, email, code, otpExpiration)
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error inserting OTP: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (o *OTPRepo) ValidateOTP(email string, otp string) (bool, error) {
+	return false, nil
+}
+
+func (o *OTPRepo) DeleteOTP(email string) error {
+	return nil
+}
+
 type UserStore struct {
 	db *pgx.Conn
 }
@@ -53,14 +104,12 @@ func (s *UserStore) CreateUser(body *CreateUserBody) (CreateUserResponse, error)
 
 	dob, _ := time.Parse("2006-01-02", body.DateOfBirth)
 
-	formattedDOB := dob.Format("2006-01-02")
-
 	row := tx.QueryRow(
 		ctx,
-		"INSERT INTO users (email, username, first_name, last_name, password, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, first_name, last_name;",
-		body.Email, body.Username, body.FirstName, body.LastName, body.Password, formattedDOB)
+		"INSERT INTO users (email, username, first_name, last_name, password, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6::DATE) RETURNING id, username, first_name, last_name;",
+		body.Email, body.Username, body.FirstName, body.LastName, body.Password, dob.Format("2006-01-02"))
 
-	err = row.Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.LastName)
+	err = row.Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName)
 
 	if err != nil {
 		var e *pgconn.PgError

@@ -60,6 +60,7 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 	data, err := h.Store.CreateUser(body)
 
 	log.Println("error from create user: ", err)
+	log.Println("data: ", data)
 
 	if err != nil {
 		//var clientError helpers.ClientError
