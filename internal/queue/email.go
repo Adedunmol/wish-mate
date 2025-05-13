@@ -15,7 +15,7 @@ type EmailDeliveryPayload struct {
 	Template string
 	Subject  string
 	Email    string
-	Data     interface{}
+	Data     any
 }
 
 func (e *EmailDeliveryPayload) NewTask() (*asynq.Task, error) {
@@ -49,6 +49,8 @@ func HandleEmailTask(ctx context.Context, t *asynq.Task) error {
 		log.Println(err)
 		return err
 	}
+
+	log.Printf("email has been sent to successfully: %s", payload.Email)
 
 	return nil
 }

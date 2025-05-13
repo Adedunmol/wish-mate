@@ -13,31 +13,44 @@ import (
 // go to google app passwords and create an app and use the details given
 
 type Email struct {
-	ToAddr   string      `json:"to_addr"`
-	Subject  string      `json:"subject"`
-	Template string      `json:"template"`
-	Vars     interface{} `json:"vars"`
+	ToAddr   string `json:"to_addr"`
+	Subject  string `json:"subject"`
+	Template string `json:"template"`
+	Vars     any    `json:"vars"`
 }
 
 func SendHTMLEmail(to []string, subject, htmlBody string) error {
+	from := os.Getenv("FROM_EMAIL")
+	password := os.Getenv("FROM_EMAIL_PASSWORD")
+	smtpAddr := os.Getenv("SMTP_ADDR")
+	smtpPort := os.Getenv("SMTP_PORT")
+	adminEmail := os.Getenv("ADMIN_EMAIL")
 
-	auth := smtp.PlainAuth(
-		"",
-		os.Getenv("FROM_EMAIL"),
-		os.Getenv("FROM_EMAIL_PASSWORD"),
-		os.Getenv("FROM_EMAIL_SMTP"),
-	)
+	auth := smtp.PlainAuth("", from, password, smtpAddr)
 
-	headers := "MIME-version: 1.0;\nContent-Type: text/html; charset: UTF-8"
+	// Build full headers
+	headers := make(map[string]string)
+	headers["From"] = adminEmail
+	headers["To"] = strings.Join(to, ", ")
+	headers["Subject"] = subject
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
 
-	message := "Subject: " + subject + "\n" + headers + "\n\n" + htmlBody
+	// Construct email message
+	var msg strings.Builder
+	for k, v := range headers {
+		msg.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
+	}
+	msg.WriteString("\r\n")   // Blank line between headers and body
+	msg.WriteString(htmlBody) // HTML content
 
+	// Send email
 	return smtp.SendMail(
-		os.Getenv("SMTP_ADDR"),
+		smtpAddr+":"+smtpPort,
 		auth,
-		os.Getenv("FROM_EMAIL"),
+		from,
 		to,
-		[]byte(message),
+		[]byte(msg.String()),
 	)
 }
 

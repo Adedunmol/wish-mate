@@ -39,7 +39,7 @@ func (qc *Client) Enqueue(taskPayload *TaskPayload) error {
 			Email:    taskPayload.Payload["email"].(string),
 			Template: taskPayload.Payload["template"].(string),
 			Subject:  taskPayload.Payload["subject"].(string),
-			Data:     map[string]interface{}{},
+			Data:     taskPayload.Payload["data"],
 		}
 
 		task, err := emailPayload.NewTask()

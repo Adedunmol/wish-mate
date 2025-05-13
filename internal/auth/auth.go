@@ -111,10 +111,14 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 			"email":    body.Email,
 			"template": "verification_mail",
 			"subject":  "Verify your email",
-			"data": map[string]interface{}{
-				"username":   body.Username,
-				"code":       code,
-				"expiration": 30 * time.Minute,
+			"data": struct {
+				Username   string
+				Code       string
+				Expiration int
+			}{
+				Username:   body.Username,
+				Code:       code,
+				Expiration: OtpExpiration,
 			},
 		},
 	})
