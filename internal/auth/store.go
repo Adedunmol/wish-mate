@@ -70,11 +70,66 @@ func (o *OTPRepo) CreateOTP(email string, code string, expiration int) error {
 	return nil
 }
 
+var ErrInvalidOtp = errors.New("invalid OTP")
+
 func (o *OTPRepo) ValidateOTP(email string, otp string) (bool, error) {
-	return false, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := o.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return false, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		SELECT otp FROM otps 
+		WHERE email = $1 LIMIT 1;
+	`
+
+	row := tx.QueryRow(ctx, query, email)
+
+	var foundOtp string
+	err = row.Scan(&foundOtp)
+
+	if err != nil {
+		return false, fmt.Errorf("error scanning otp: %w", errors.Join(helpers.ErrInternalServerError, err))
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(foundOtp), []byte(otp)); err != nil {
+		return false, ErrInvalidOtp
+	}
+
+	return true, nil
 }
 
 func (o *OTPRepo) DeleteOTP(email string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := o.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		DELETE FROM otps WHERE email = $1;
+	`
+
+	_, err = tx.Exec(ctx, query, email)
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error deleting OTP: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	return nil
 }
 

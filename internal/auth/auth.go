@@ -224,12 +224,22 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 
 	isValid, err := h.OTPStore.ValidateOTP(body.Email, body.Code)
 	if err != nil {
+		if errors.Is(err, ErrInvalidOtp) {
+			helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		}
 		helpers.HandleError(responseWriter, err)
 		return
 	}
 
 	if !isValid {
 		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		return
+	}
+
+	err = h.OTPStore.DeleteOTP(user.Email)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
@@ -354,8 +364,14 @@ func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request
 
 	user, err := h.Store.FindUserByEmail(body.Email)
 	if err != nil {
-		log.Println("im here: ", err)
 		helpers.HandleError(responseWriter, helpers.ErrBadRequestInternal)
+		return
+	}
+
+	err = h.OTPStore.DeleteOTP(user.Email)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
@@ -373,7 +389,7 @@ func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	err = h.OTPStore.CreateOTP(user.Email, fmt.Sprint(hashedCode), OtpExpiration)
+	err = h.OTPStore.CreateOTP(user.Email, string(hashedCode), OtpExpiration)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
