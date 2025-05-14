@@ -53,7 +53,7 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	if body.Date == "" {
-		body.Date = userData.DateOfBirth
+		body.Date = userData.DateOfBirth.String()
 	}
 
 	if body.NotifyBefore < 0 {

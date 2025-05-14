@@ -13,6 +13,7 @@ var (
 	ErrForbidden           = NewHTTPError(nil, http.StatusForbidden, "forbidden from accessing the resource", nil)
 	ErrDecode              = NewHTTPError(nil, http.StatusInternalServerError, "error decoding json body", nil)
 	ErrBadRequest          = NewHTTPError(nil, http.StatusBadRequest, "invalid request body", nil)
+	ErrBadRequestInternal  = NewHTTPError(nil, http.StatusBadRequest, "bad request", nil)
 	ErrUnauthorized        = NewHTTPError(nil, http.StatusUnauthorized, "invalid credentials", nil)
 	ErrConflict            = NewHTTPError(nil, http.StatusConflict, "resource already exists", nil)
 	ErrValidate            = NewHTTPError(nil, http.StatusBadRequest, "error validating request body", nil)

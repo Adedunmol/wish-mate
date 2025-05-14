@@ -12,7 +12,7 @@ type User struct {
 	Username     string
 	Email        string
 	Password     string
-	DateOfBirth  string
+	DateOfBirth  *time.Time
 	Verified     bool
 	RefreshToken string
 }

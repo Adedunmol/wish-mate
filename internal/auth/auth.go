@@ -354,7 +354,8 @@ func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request
 
 	user, err := h.Store.FindUserByEmail(body.Email)
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+		log.Println("im here: ", err)
+		helpers.HandleError(responseWriter, helpers.ErrBadRequestInternal)
 		return
 	}
 
@@ -385,10 +386,14 @@ func (h *Handler) RequestCodeHandler(responseWriter http.ResponseWriter, request
 			"email":    body.Email,
 			"template": "verification_mail",
 			"subject":  "Verify your email",
-			"data": map[string]interface{}{
-				"username":   user.Username,
-				"code":       code,
-				"expiration": 30 * time.Minute,
+			"data": struct {
+				Username   string
+				Code       string
+				Expiration int
+			}{
+				Username:   user.Username,
+				Code:       code,
+				Expiration: OtpExpiration,
 			},
 		},
 	})
