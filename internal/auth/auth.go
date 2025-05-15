@@ -475,10 +475,14 @@ func (h *Handler) ForgotPasswordRequestHandler(responseWriter http.ResponseWrite
 			"email":    body.Email,
 			"template": "forgot_password_mail",
 			"subject":  "Forgot Password",
-			"data": map[string]interface{}{
-				"username":   user.Username,
-				"code":       code,
-				"expiration": 30 * time.Minute,
+			"data": struct {
+				Username   string
+				Code       string
+				Expiration int
+			}{
+				Username:   user.Username,
+				Code:       code,
+				Expiration: OtpExpiration,
 			},
 		},
 	})
