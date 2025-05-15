@@ -266,6 +266,20 @@ func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
 	}
 	defer tx.Rollback(ctx)
 
+	query := `
+		UPDATE users SET 
+		verified = COALESCE(NULLIF($1, ''), verified), 
+		password = COALESCE(NULLIF($2, ''), password),
+		refresh_token = COALESCE(NULLIF($3, ''), refresh_token)
+		WHERE id = $4
+	`
+
+	_, err = tx.Exec(ctx, query, data.Verified, data.Password, data.RefreshToken, id)
+
+	if err != nil {
+		return User{}, helpers.ErrInternalServerError
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return User{}, fmt.Errorf("commit tx: %w", err)
@@ -285,9 +299,59 @@ func (s *UserStore) ComparePasswords(storedPassword, candidatePassword string) b
 }
 
 func (s *UserStore) DeleteRefreshToken(refreshToken string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		UPDATE users SET refresh_token = ''
+		WHERE refresh_token = $1
+	`
+
+	_, err = tx.Exec(ctx, query, refreshToken)
+
+	if err != nil {
+		return helpers.ErrInternalServerError
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
 	return nil
 }
 
 func (s *UserStore) UpdateRefreshToken(oldRefreshToken, refreshToken string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		UPDATE users SET refresh_token = $1
+		WHERE refresh_token = $2
+	`
+
+	_, err = tx.Exec(ctx, query, refreshToken, oldRefreshToken)
+
+	if err != nil {
+		return helpers.ErrInternalServerError
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
 	return nil
 }
