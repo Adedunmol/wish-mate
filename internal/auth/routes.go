@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/Adedunmol/wish-mate/internal/config"
+	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -23,7 +24,7 @@ func AuthRoutes(config config.Config) {
 	authRouter.Post("/request-code", http.HandlerFunc(handler.RequestCodeHandler))
 	authRouter.Post("/forgot-password", http.HandlerFunc(handler.ForgotPasswordHandler))
 	authRouter.Post("/forgot-password-request", http.HandlerFunc(handler.ForgotPasswordRequestHandler))
-	authRouter.Post("/reset-password", http.HandlerFunc(handler.ResetPasswordHandler))
+	authRouter.With(middlewares.AuthMiddleware).Post("/reset-password", http.HandlerFunc(handler.ResetPasswordHandler))
 
 	config.Router.Mount("/auth", authRouter)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"log"
 	"net/http"
 	"os"
@@ -65,16 +64,6 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-
-	r.Use(middlewares.LoggingMiddleware)
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		fmt.Fprintf(w, "Hello from wishmate API")
-	})
 
 	routes.SetupRoutes(config.Config{DB: db, Router: r, Queue: qc})
 

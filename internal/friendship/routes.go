@@ -3,6 +3,7 @@ package friendship
 import (
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/config"
+	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -10,6 +11,8 @@ import (
 func FriendshipRoutes(config config.Config) {
 
 	friendshipRouter := chi.NewRouter()
+
+	friendshipRouter.Use(middlewares.AuthMiddleware)
 
 	authStore := auth.NewUserStore(config.DB)
 	friendshipStore := NewFriendshipStore(config.DB)

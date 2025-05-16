@@ -3,6 +3,7 @@ package wishlist
 import (
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/config"
+	"github.com/Adedunmol/wish-mate/internal/middlewares"
 	"github.com/Adedunmol/wish-mate/internal/reminder"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 func WishlistRoutes(config config.Config) {
 
 	wishlistRouter := chi.NewRouter()
+
+	wishlistRouter.Use(middlewares.AuthMiddleware)
 
 	store := NewWishlistStore(config.DB)
 	userStore := auth.NewUserStore(config.DB)
