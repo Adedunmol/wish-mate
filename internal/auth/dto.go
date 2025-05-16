@@ -50,7 +50,7 @@ type OTP struct {
 
 type UpdateUserBody struct {
 	helpers.Validation
-	Verified     bool   `json:"verified"`
+	Verified     *bool  `json:"verified"` // take in a pointer cos of COALESCE in Postgres
 	Password     string `json:"password"`
 	RefreshToken string `json:"refresh_token"`
 }

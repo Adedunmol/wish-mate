@@ -94,6 +94,9 @@ func (o *OTPRepo) ValidateOTP(email string, otp string) (bool, error) {
 	err = row.Scan(&foundOtp)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, ErrInvalidOtp
+		}
 		return false, fmt.Errorf("error scanning otp: %w", errors.Join(helpers.ErrInternalServerError, err))
 	}
 
@@ -268,7 +271,7 @@ func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
 
 	query := `
 		UPDATE users SET 
-		verified = COALESCE(NULLIF($1, ''), verified), 
+		verified = COALESCE($1, verified), 
 		password = COALESCE(NULLIF($2, ''), password),
 		refresh_token = COALESCE(NULLIF($3, ''), refresh_token)
 		WHERE id = $4
@@ -277,7 +280,8 @@ func (s *UserStore) UpdateUser(id int, data UpdateUserBody) (User, error) {
 	_, err = tx.Exec(ctx, query, data.Verified, data.Password, data.RefreshToken, id)
 
 	if err != nil {
-		return User{}, helpers.ErrInternalServerError
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return User{}, fmt.Errorf("error updating user: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

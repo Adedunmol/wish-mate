@@ -225,7 +225,8 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 	isValid, err := h.OTPStore.ValidateOTP(body.Email, body.Code)
 	if err != nil {
 		if errors.Is(err, ErrInvalidOtp) {
-			helpers.HandleError(responseWriter, helpers.ErrBadRequest)
+			helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid otp", nil))
+			return
 		}
 		helpers.HandleError(responseWriter, err)
 		return
@@ -243,8 +244,9 @@ func (h *Handler) VerifyUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
+	verified := true
 	updateBody := UpdateUserBody{
-		Verified: true,
+		Verified: &verified,
 	}
 
 	_, err = h.Store.UpdateUser(user.ID, updateBody)
