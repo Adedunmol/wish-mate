@@ -464,7 +464,7 @@ func (h *Handler) ForgotPasswordRequestHandler(responseWriter http.ResponseWrite
 		return
 	}
 
-	err = h.OTPStore.CreateOTP(user.Email, fmt.Sprint(hashedCode), OtpExpiration)
+	err = h.OTPStore.CreateOTP(user.Email, string(hashedCode), OtpExpiration)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
@@ -525,6 +525,10 @@ func (h *Handler) ForgotPasswordHandler(responseWriter http.ResponseWriter, requ
 
 	isValid, err := h.OTPStore.ValidateOTP(body.Email, body.Code)
 	if err != nil {
+		if errors.Is(err, ErrInvalidOtp) {
+			helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid otp", nil))
+			return
+		}
 		helpers.HandleError(responseWriter, err)
 		return
 	}
@@ -533,6 +537,14 @@ func (h *Handler) ForgotPasswordHandler(responseWriter http.ResponseWriter, requ
 		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
 		return
 	}
+
+	err = h.OTPStore.DeleteOTP(user.Email)
+
+	if err != nil {
+		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), 10)
 
 	if err != nil {
