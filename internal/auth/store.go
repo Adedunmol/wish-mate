@@ -200,9 +200,9 @@ func (s *UserStore) FindUserByEmail(email string) (User, error) {
 
 	var user User
 
-	row := tx.QueryRow(ctx, "SELECT id, username, email, first_name, last_name, password, date_of_birth FROM users WHERE email = $1;", email)
+	row := tx.QueryRow(ctx, "SELECT id, username, email, first_name, last_name, password, date_of_birth, verified FROM users WHERE email = $1;", email)
 
-	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.DateOfBirth)
+	err = row.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.DateOfBirth, &user.Verified)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

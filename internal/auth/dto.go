@@ -78,5 +78,5 @@ type ForgotPasswordBody struct {
 	Email              string `json:"email" validate:"required,email"`
 	Code               string `json:"code" validate:"required"`
 	NewPassword        string `json:"new_password" validate:"required"`
-	NewPasswordConfirm string `json:"new_password_confirmation" validate:"required"`
+	NewPasswordConfirm string `json:"new_password_confirm" validate:"required"`
 }

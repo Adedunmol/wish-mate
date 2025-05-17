@@ -16,13 +16,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		tokenString := strings.Split(authHeader, " ")[1]
+		tokenString := strings.Split(authHeader, " ")
+
 		if len(tokenString) != 2 {
 			helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 			return
 		}
 
-		data, err := helpers.DecodeToken(tokenString)
+		data, err := helpers.DecodeToken(tokenString[1])
 		if err != nil {
 			helpers.HandleError(responseWriter, helpers.ErrUnauthorized)
 			return
