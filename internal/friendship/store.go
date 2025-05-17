@@ -137,20 +137,27 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 	}
 	defer tx.Rollback(ctx)
 
-	query := `SELECT id, user_id, friend_id, friend_since FROM frienships WHERE user_id = $1 AND status = $2;`
-	var friendships []FriendshipResponse
+	var query string
+	var rows pgx.Rows
+	if status == "all" {
+		query = `SELECT user_id, friend_id, friend_since, status FROM friendships WHERE user_id = $1;`
+		rows, err = f.db.Query(ctx, query, userID)
+	} else {
+		query = `SELECT user_id, friend_id, friend_since, status FROM friendships WHERE user_id = $1 AND status = $2;`
+		rows, err = f.db.Query(ctx, query, userID, status)
+	}
 
-	rows, err := f.db.Query(ctx, query, userID, status)
+	var friendships []FriendshipResponse
 
 	if err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
-		return nil, fmt.Errorf("error querying friendhips: %v", err)
+		return nil, fmt.Errorf("error querying friendships: %v", err)
 	}
 
 	for rows.Next() {
 		var friendship FriendshipResponse
 
-		err = rows.Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.FriendSince)
+		err = rows.Scan(&friendship.UserID, &friendship.FriendID, &friendship.FriendSince, &friendship.Status)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error scanning rows: %w", err)

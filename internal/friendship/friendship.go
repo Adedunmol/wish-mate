@@ -13,16 +13,16 @@ import (
 )
 
 type Response struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 type Handler struct {
 	AuthStore         auth.Store
 	FriendStore       FriendStore
 	Queue             queue.Queue
-	NotificationStore notification.NotificationStore
+	NotificationStore *notification.NotificationStore
 }
 
 func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request *http.Request) {
