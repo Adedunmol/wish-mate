@@ -99,10 +99,10 @@ func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (friendship.
 	return data, nil
 }
 
-func (s *StubFriendStore) UpdateFriendship(friendshipID int, status string) (friendship.FriendshipResponse, error) {
+func (s *StubFriendStore) UpdateFriendship(userID, friendID int, status string) (friendship.FriendshipResponse, error) {
 
 	for i, u := range s.friends {
-		if u.ID == friendshipID {
+		if u.UserID == userID && u.FriendID == friendID {
 			s.friends[i].Status = status
 			return s.friends[i], nil
 		}
@@ -123,10 +123,10 @@ func (s *StubFriendStore) GetAllFriendships(userID int, status string) ([]friend
 	return result, nil
 }
 
-func (s *StubFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
+func (s *StubFriendStore) GetFriendship(userID, friendID int) (friendship.FriendshipResponse, error) {
 
 	for _, u := range s.friends {
-		if u.ID == requestID {
+		if u.UserID == userID && (u.FriendID == friendID) {
 			return u, nil
 		}
 	}
@@ -143,7 +143,7 @@ func (s *NotFoundFriendStore) CreateFriendship(_, _ int) (friendship.FriendshipR
 	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
-func (s *NotFoundFriendStore) UpdateFriendship(_ int, _ string) (friendship.FriendshipResponse, error) {
+func (s *NotFoundFriendStore) UpdateFriendship(_, _ int, _ string) (friendship.FriendshipResponse, error) {
 	return friendship.FriendshipResponse{}, helpers.ErrNotFound
 }
 
@@ -151,7 +151,7 @@ func (s *NotFoundFriendStore) GetAllFriendships(_ int, _ string) ([]friendship.F
 	return nil, nil
 }
 
-func (s *NotFoundFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
+func (s *NotFoundFriendStore) GetFriendship(_, _ int) (friendship.FriendshipResponse, error) {
 	return friendship.FriendshipResponse{}, nil
 }
 
@@ -164,7 +164,7 @@ func (s *ConflictFriendStore) CreateFriendship(_, _ int) (friendship.FriendshipR
 	return friendship.FriendshipResponse{}, helpers.ErrConflict
 }
 
-func (s *ConflictFriendStore) UpdateFriendship(_ int, _ string) (friendship.FriendshipResponse, error) {
+func (s *ConflictFriendStore) UpdateFriendship(_, _ int, _ string) (friendship.FriendshipResponse, error) {
 	return friendship.FriendshipResponse{}, helpers.ErrConflict
 }
 
@@ -172,7 +172,7 @@ func (s *ConflictFriendStore) GetAllFriendships(_ int, _ string) ([]friendship.F
 	return nil, nil
 }
 
-func (s *ConflictFriendStore) GetFriendship(requestID int) (friendship.FriendshipResponse, error) {
+func (s *ConflictFriendStore) GetFriendship(userID, friendID int) (friendship.FriendshipResponse, error) {
 	return friendship.FriendshipResponse{}, nil
 }
 
@@ -312,7 +312,7 @@ func TestUpdateRequest(t *testing.T) {
 	t.Run("accept a request and return the entry", func(t *testing.T) {
 		data := []byte(`{ "type": "accept" }`)
 
-		request := createUpdateRequest(1, 1, data)
+		request := createUpdateRequest(1, 2, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateRequestHandler(response, request)
@@ -350,7 +350,7 @@ func TestUpdateRequest(t *testing.T) {
 
 		data := []byte(`{ "type": "block" }`)
 
-		request := createUpdateRequest(1, 1, data)
+		request := createUpdateRequest(1, 2, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateRequestHandler(response, request)
@@ -465,7 +465,7 @@ func TestUpdateRequest(t *testing.T) {
 	t.Run("return 400 for invalid type", func(t *testing.T) {
 		data := []byte(`{ "type": "random" }`)
 
-		request := createUpdateRequest(1, 1, data)
+		request := createUpdateRequest(1, 2, data)
 		response := httptest.NewRecorder()
 
 		server.UpdateRequestHandler(response, request)
@@ -672,7 +672,7 @@ func TestGetFriendship(t *testing.T) {
 
 	t.Run("return a friendship", func(t *testing.T) {
 
-		request := getARequest(1, 1)
+		request := getARequest(1, 2)
 		response := httptest.NewRecorder()
 
 		server.GetRequestHandler(response, request)
@@ -724,7 +724,7 @@ func TestGetFriendship(t *testing.T) {
 
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("user_id", fmt.Sprint(2))
-		rctx.URLParams.Add("request_id", fmt.Sprint(1))
+		rctx.URLParams.Add("friend_id", fmt.Sprint(1))
 
 		request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 		response := httptest.NewRecorder()
@@ -789,14 +789,14 @@ func createSendRequest(userID int, data []byte) *http.Request {
 	return request
 }
 
-func createUpdateRequest(userID, requestID int, data []byte) *http.Request {
+func createUpdateRequest(userID, friendID int, data []byte) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
-	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, requestID), bytes.NewReader(data))
+	request, _ := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, friendID), bytes.NewReader(data))
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
-	rctx.URLParams.Add("request_id", fmt.Sprint(requestID))
+	rctx.URLParams.Add("friend_id", fmt.Sprint(friendID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
@@ -817,14 +817,14 @@ func getAllRequests(userID, requestID int, status string) *http.Request {
 	return request
 }
 
-func getARequest(userID, requestID int) *http.Request {
+func getARequest(userID, friendID int) *http.Request {
 
 	ctx := context.WithValue(context.Background(), "user_id", userID)
-	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, requestID), nil)
+	request, _ := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%d/friend_requests/%d", userID, friendID), nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("user_id", fmt.Sprint(userID))
-	rctx.URLParams.Add("request_id", fmt.Sprint(requestID))
+	rctx.URLParams.Add("friend_id", fmt.Sprint(friendID))
 
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 

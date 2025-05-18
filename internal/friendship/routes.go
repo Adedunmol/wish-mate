@@ -22,8 +22,8 @@ func FriendshipRoutes(config config.Config) {
 	handler := Handler{AuthStore: authStore, FriendStore: friendshipStore, Queue: config.Queue, NotificationStore: notificationStore}
 
 	friendshipRouter.Post("/{user_id}/friend_requests", http.HandlerFunc(handler.SendRequestHandler))
-	friendshipRouter.Patch("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.UpdateRequestHandler))
-	friendshipRouter.Get("/{user_id}/friend_requests/{request_id}", http.HandlerFunc(handler.GetRequestHandler))
+	friendshipRouter.Patch("/{user_id}/friend_requests/{friend_id}", http.HandlerFunc(handler.UpdateRequestHandler))
+	friendshipRouter.Get("/{user_id}/friend_requests/{friend_id}", http.HandlerFunc(handler.GetRequestHandler))
 	friendshipRouter.Get("/{user_id}/friend_requests", http.HandlerFunc(handler.GetAllRequestsHandler))
 
 	config.Router.Mount("/users", friendshipRouter)

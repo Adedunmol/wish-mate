@@ -116,27 +116,27 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	requestID := chi.URLParam(request, "request_id")
+	friendID := chi.URLParam(request, "friend_id")
 
-	if requestID == "" {
+	if friendID == "" {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(nil, http.StatusBadRequest, "request id is required", nil))
 		return
 	}
 
-	newRequestID, err := strconv.Atoi(requestID)
+	newFriendID, err := strconv.Atoi(friendID)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
 	}
 
-	friendshipData, err := h.FriendStore.GetFriendship(newRequestID)
+	currentUserID := request.Context().Value("user_id").(int)
+
+	friendshipData, err := h.FriendStore.GetFriendship(currentUserID, newFriendID)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
 		return
 	}
-
-	currentUserID := request.Context().Value("user_id").(int)
 
 	if currentUserID != friendshipData.UserID {
 		helpers.HandleError(responseWriter, helpers.ErrForbidden)
@@ -157,7 +157,7 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	data, err := h.FriendStore.UpdateFriendship(newRequestID, status)
+	data, err := h.FriendStore.UpdateFriendship(newFriendID, status)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
@@ -264,14 +264,14 @@ func (h *Handler) GetRequestHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	requestID := chi.URLParam(request, "request_id")
+	friendID := chi.URLParam(request, "friend_id")
 
-	if requestID == "" {
+	if friendID == "" {
 		helpers.HandleError(responseWriter, helpers.NewHTTPError(nil, http.StatusBadRequest, "request id is required", nil))
 		return
 	}
 
-	newRequestID, err := strconv.Atoi(requestID)
+	newFriendID, err := strconv.Atoi(friendID)
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
 		return
@@ -284,7 +284,7 @@ func (h *Handler) GetRequestHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	data, err := h.FriendStore.GetFriendship(newRequestID)
+	data, err := h.FriendStore.GetFriendship(newUserID, newFriendID)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
