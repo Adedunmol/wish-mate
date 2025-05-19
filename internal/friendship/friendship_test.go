@@ -88,7 +88,6 @@ type StubFriendStore struct {
 func (s *StubFriendStore) CreateFriendship(userID, recipientID int) (friendship.FriendshipResponse, error) {
 
 	data := friendship.FriendshipResponse{
-		ID:       1,
 		UserID:   userID,
 		FriendID: recipientID,
 		Status:   "pending",
@@ -303,7 +302,7 @@ func TestUpdateRequest(t *testing.T) {
 		{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 	}}
 	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
-		{ID: 1, UserID: 1, FriendID: 2, Status: "pending"},
+		{UserID: 1, FriendID: 2, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
@@ -341,8 +340,8 @@ func TestUpdateRequest(t *testing.T) {
 			{ID: 2, FirstName: "Ade", LastName: "Oye", Password: "password", Email: "ade@gmail.com", Username: "Ade"},
 		}}
 		friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
-			{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
-			{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
+			{UserID: 1, FriendID: 2, Status: "accepted"},
+			{UserID: 2, FriendID: 1, Status: "accepted"},
 		}}
 		mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
@@ -490,9 +489,9 @@ func TestGetAllFriendships(t *testing.T) {
 	}}
 
 	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
-		{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
-		{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
-		{ID: 3, UserID: 1, FriendID: 3, Status: "pending"},
+		{UserID: 1, FriendID: 2, Status: "accepted"},
+		{UserID: 2, FriendID: 1, Status: "accepted"},
+		{UserID: 1, FriendID: 3, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
@@ -662,9 +661,9 @@ func TestGetFriendship(t *testing.T) {
 	}}
 
 	friendStore := StubFriendStore{friends: []friendship.FriendshipResponse{
-		{ID: 1, UserID: 1, FriendID: 2, Status: "accepted"},
-		{ID: 2, UserID: 2, FriendID: 1, Status: "accepted"},
-		{ID: 3, UserID: 1, FriendID: 3, Status: "pending"},
+		{UserID: 1, FriendID: 2, Status: "accepted"},
+		{UserID: 2, FriendID: 1, Status: "accepted"},
+		{UserID: 1, FriendID: 3, Status: "pending"},
 	}}
 	mockQueue := StubQueue{Tasks: make([]queue.TaskPayload, 0)}
 
