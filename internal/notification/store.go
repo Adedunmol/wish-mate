@@ -40,7 +40,7 @@ func (s *NotificationStore) CreateNotification(body *CreateNotificationBody) (No
 	query := `
 		INSERT INTO notifications (user_id, title, body, type)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, user_id, title, body, type, read, created_at
+		RETURNING id, user_id, title, body, type, read
 	`
 
 	var notification Notification
@@ -90,7 +90,7 @@ func (s *NotificationStore) UpdateNotification(ID int, status string) (Notificat
 		UPDATE notifications
 		SET read = $1
 		WHERE id = $2
-		RETURNING id, user_id, title, body, type, read, created_at
+		RETURNING id, user_id, title, body, type, read
 	`
 
 	var notification Notification
@@ -128,7 +128,7 @@ func (s *NotificationStore) GetUserNotifications(userID int) ([]Notification, er
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT id, user_id, title, body, type, read, created_at
+		SELECT id, user_id, title, body, type, read
 		FROM notifications
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -202,7 +202,7 @@ func (s *NotificationStore) GetNotification(ID int) (Notification, error) {
 	defer cancel()
 
 	query := `
-		SELECT id, user_id, title, body, type, read, created_at
+		SELECT id, user_id, title, body, type, read
 		FROM notifications
 		WHERE id = $1
 	`

@@ -16,7 +16,7 @@ type UpdateFriendRequestBody struct {
 }
 
 type FriendshipResponse struct {
-	ID          int        `json:"id"`
+	//ID          int        `json:"id"`
 	UserID      int        `json:"user_id"`
 	FriendID    int        `json:"friend_id"`
 	Status      string     `json:"status"`

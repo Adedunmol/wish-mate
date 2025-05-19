@@ -87,7 +87,8 @@ func (h *Handler) SendRequestHandler(responseWriter http.ResponseWriter, request
 	})
 
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		helpers.HandleError(responseWriter, err)
 		return
 	}
 
@@ -157,7 +158,7 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	data, err := h.FriendStore.UpdateFriendship(newFriendID, status)
+	data, err := h.FriendStore.UpdateFriendship(currentUserID, newFriendID, status)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
