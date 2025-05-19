@@ -48,6 +48,16 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 	err = f.db.QueryRow(ctx, query, userID, recipientID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+
+			query = `
+					SELECT user_id, friend_id, status, friend_since FROM friendships WHERE user_id = $1 AND friend_id = $2;
+					`
+			err = f.db.QueryRow(ctx, query, userID, recipientID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
+
+			return friendship, nil // or fetch it from DB explicitly
+		}
+
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
 	}
@@ -86,7 +96,7 @@ func (f *FriendshipStore) UpdateFriendship(userID, friendID int, status string) 
 		UPDATE friendships SET status = $1, friend_since = $2 WHERE user_id = $3 AND friend_id = $4 RETURNING id, user_id, friend_id;
 	`
 
-		err = f.db.QueryRow(ctx, updateQuery, "accepted", time.Now(), userID, friendID).Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID)
+		err = f.db.QueryRow(ctx, updateQuery, "accepted", time.Now(), userID, friendID).Scan(&friendship.UserID, &friendship.FriendID)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
@@ -109,7 +119,7 @@ func (f *FriendshipStore) UpdateFriendship(userID, friendID int, status string) 
 		UPDATE friendships SET status = $1 WHERE user_id = $2 AND friend_id = $3 RETURNING id, user_id, friend_id, status;
 	`
 
-		err = f.db.QueryRow(ctx, updateQuery, status, userID, friendID).Scan(&friendship.ID, &friendship.UserID, &friendship.FriendID, &friendship.Status)
+		err = f.db.QueryRow(ctx, updateQuery, status, userID, friendID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
