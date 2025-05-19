@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
 	"github.com/Adedunmol/wish-mate/internal/queue"
 	"golang.org/x/crypto/bcrypt"
@@ -98,7 +97,7 @@ func (h *Handler) CreateUserHandler(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	err = h.OTPStore.CreateOTP(body.Email, fmt.Sprint(hashedCode), OtpExpiration)
+	err = h.OTPStore.CreateOTP(body.Email, string(hashedCode), OtpExpiration)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
