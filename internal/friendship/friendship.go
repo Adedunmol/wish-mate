@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Response struct {
@@ -135,6 +136,10 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 	friendshipData, err := h.FriendStore.GetFriendship(currentUserID, newFriendID)
 
 	if err != nil {
+		if errors.Is(err, ErrNoFriendship) {
+			helpers.HandleError(responseWriter, helpers.ErrNotFound)
+			return
+		}
 		helpers.HandleError(responseWriter, err)
 		return
 	}
@@ -146,7 +151,7 @@ func (h *Handler) UpdateRequestHandler(responseWriter http.ResponseWriter, reque
 
 	var status string
 
-	switch body.Type {
+	switch strings.ToLower(body.Type) {
 	case "accept":
 		status = "accepted"
 		break

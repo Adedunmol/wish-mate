@@ -36,7 +36,7 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 	}
 	defer tx.Rollback(ctx)
 
-	query := `
+	insertQuery := `
 	INSERT INTO friendships (user_id, friend_id, status, friend_since)
 	VALUES ($1, $2, 'pending', NULL)
 	ON CONFLICT (user_id, friend_id) DO NOTHING
@@ -45,22 +45,32 @@ func (f *FriendshipStore) CreateFriendship(userID, recipientID int) (FriendshipR
 
 	var friendship FriendshipResponse
 
-	err = f.db.QueryRow(ctx, query, userID, recipientID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
+	// Insert user -> friend
+	err = tx.QueryRow(ctx, insertQuery, userID, recipientID).Scan(
+		&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince,
+	)
 
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-
-			query = `
-					SELECT user_id, friend_id, status, friend_since FROM friendships WHERE user_id = $1 AND friend_id = $2;
-					`
-			err = f.db.QueryRow(ctx, query, userID, recipientID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
-
-			return friendship, nil // or fetch it from DB explicitly
+	if errors.Is(err, pgx.ErrNoRows) {
+		// No insert, fetch existing one
+		query := `
+			SELECT user_id, friend_id, status, friend_since 
+			FROM friendships 
+			WHERE user_id = $1 AND friend_id = $2;
+		`
+		err = tx.QueryRow(ctx, query, userID, recipientID).Scan(
+			&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince,
+		)
+		if err != nil {
+			err = errors.Join(helpers.ErrInternalServerError, err)
+			return FriendshipResponse{}, fmt.Errorf("fetch existing friendship: %w", err)
 		}
-
+	} else if err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
 	}
+
+	// Insert friend -> user (ignore scan result)
+	_, _ = tx.Exec(ctx, insertQuery, recipientID, userID)
 
 	if err := tx.Commit(ctx); err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
@@ -87,43 +97,27 @@ func (f *FriendshipStore) UpdateFriendship(userID, friendID int, status string) 
 
 	err = f.db.QueryRow(ctx, query, userID, friendID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FriendshipResponse{}, ErrNoFriendship
+		}
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return FriendshipResponse{}, fmt.Errorf("error getting friendship: %w", err)
 	}
 
-	if friendship.Status == "pending" {
-		updateQuery := `
-		UPDATE friendships SET status = $1, friend_since = $2 WHERE user_id = $3 AND friend_id = $4 RETURNING id, user_id, friend_id;
+	updateQuery := `
+		UPDATE friendships SET status = $1, friend_since = $2 WHERE user_id = $3 AND friend_id = $4 RETURNING user_id, friend_id, status, friend_since;
 	`
 
-		err = f.db.QueryRow(ctx, updateQuery, "accepted", time.Now(), userID, friendID).Scan(&friendship.UserID, &friendship.FriendID)
-		if err != nil {
-			err = errors.Join(helpers.ErrInternalServerError, err)
-			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
-		}
+	err = f.db.QueryRow(ctx, updateQuery, status, time.Now(), userID, friendID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status, &friendship.FriendSince)
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
+	}
 
-		insertQuery := `
-	INSERT INTO friendships (user_id, friend_id, status, friend_since)
-	VALUES ($1, $2, 'accepted', $3)
-	ON CONFLICT (user_id, friend_id) DO NOTHING
-	`
-
-		_, err = f.db.Exec(ctx, insertQuery, &friendship.FriendID, &friendship.UserID, time.Now())
-
-		if err != nil {
-			err = errors.Join(helpers.ErrInternalServerError, err)
-			return FriendshipResponse{}, fmt.Errorf("error inserting friendship: %w", err)
-		}
-	} else {
-		updateQuery := `
-		UPDATE friendships SET status = $1 WHERE user_id = $2 AND friend_id = $3 RETURNING id, user_id, friend_id, status;
-	`
-
-		err = f.db.QueryRow(ctx, updateQuery, status, userID, friendID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.Status)
-		if err != nil {
-			err = errors.Join(helpers.ErrInternalServerError, err)
-			return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
-		}
+	_, err = f.db.Exec(ctx, updateQuery, status, time.Now(), friendID, userID)
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return FriendshipResponse{}, fmt.Errorf("error updating friendship: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -183,6 +177,8 @@ func (f *FriendshipStore) GetAllFriendships(userID int, status string) ([]Friend
 	return friendships, nil
 }
 
+var ErrNoFriendship = errors.New("no friendship found")
+
 func (f *FriendshipStore) GetFriendship(userID, friendID int) (FriendshipResponse, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -200,6 +196,9 @@ func (f *FriendshipStore) GetFriendship(userID, friendID int) (FriendshipRespons
 
 	err = f.db.QueryRow(ctx, query, userID, friendID).Scan(&friendship.UserID, &friendship.FriendID, &friendship.FriendSince, &friendship.Status)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FriendshipResponse{}, ErrNoFriendship
+		}
 		return FriendshipResponse{}, fmt.Errorf("error getting friendship: %w", err)
 	}
 
