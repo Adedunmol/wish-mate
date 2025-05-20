@@ -64,10 +64,10 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 
 	wishlist.Items = make([]ItemResponse, 0)
 
-	insertItemQuery := `INSERT INTO items (wishlist_id, name, description, link) VALUES ($1, $2, $3, $4) RETURNING id, name, description, price;`
+	insertItemQuery := `INSERT INTO items (wishlist_id, name, description, link, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, link;`
 	for _, item := range body.Items {
 		var newItem ItemResponse
-		err = w.db.QueryRow(ctx, insertItemQuery, wishlist.ID, item.Name, item.Description, item.Link).
+		err = w.db.QueryRow(ctx, insertItemQuery, wishlist.ID, item.Name, item.Description, item.Link, userID).
 			Scan(&newItem.ID, &newItem.Name, &newItem.Description, &newItem.Link)
 
 		if err != nil {
@@ -157,7 +157,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 				FirstName: firstName.String,
 				LastName:  lastName.String,
 			}
-			item.PickedBy = user
+			item.PickedBy = &user
 		}
 
 		wishlist.Items = append(wishlist.Items, item)
@@ -248,7 +248,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 			}
 
 			if userID.Valid {
-				item.PickedBy = auth.User{
+				item.PickedBy = &auth.User{
 					ID:        int(userID.Int64),
 					Username:  username.String,
 					FirstName: firstName.String,
@@ -412,7 +412,7 @@ func (w *WishlistStore) GetItem(wishlistID, itemID int) (ItemResponse, error) {
 
 		err = w.db.QueryRow(ctx, pickQuery, itemID).Scan(&pickedBy.ID, &pickedBy.Username, &pickedBy.FirstName, &pickedBy.LastName)
 		if err == nil {
-			item.PickedBy = pickedBy
+			item.PickedBy = &pickedBy
 		}
 	}
 

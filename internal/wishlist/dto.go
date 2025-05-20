@@ -23,13 +23,13 @@ type Wishlist struct {
 }
 
 type ItemResponse struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Taken       bool      `json:"taken"`
-	Link        string    `json:"link"`
-	PickedBy    auth.User `json:"picked_by,omitempty"`
-	WishlistID  int       `json:"wishlist_id,omitempty"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Taken       bool       `json:"taken"`
+	Link        string     `json:"link"`
+	PickedBy    *auth.User `json:"picked_by,omitempty"`
+	WishlistID  int        `json:"wishlist_id,omitempty"`
 }
 
 type WishlistResponse struct {
