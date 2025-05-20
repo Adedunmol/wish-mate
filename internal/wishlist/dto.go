@@ -3,6 +3,7 @@ package wishlist
 import (
 	"github.com/Adedunmol/wish-mate/internal/auth"
 	"github.com/Adedunmol/wish-mate/internal/helpers"
+	"time"
 )
 
 type Item struct {
@@ -14,11 +15,11 @@ type Item struct {
 
 type Wishlist struct {
 	helpers.Validation
-	Name         string `json:"name" validate:"required"`
-	Description  string `json:"description" validate:"required"`
-	Items        []Item `json:"items,omitempty"`
-	NotifyBefore int    `json:"notify_before" validate:"required"`
-	Date         string `json:"date,omitempty"`
+	Name         string     `json:"name" validate:"required"`
+	Description  string     `json:"description" validate:"required"`
+	Items        []Item     `json:"items,omitempty"`
+	NotifyBefore int        `json:"notify_before" validate:"required"`
+	Date         *time.Time `json:"date,omitempty"`
 }
 
 type ItemResponse struct {
@@ -37,7 +38,7 @@ type WishlistResponse struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description"`
 	NotifyBefore int            `json:"notify_before,omitempty"`
-	Date         string         `json:"date,omitempty"`
+	Date         *time.Time     `json:"date,omitempty"`
 	Items        []ItemResponse `json:"items,omitempty"`
 }
 

@@ -75,10 +75,11 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	defer tx.Rollback(ctx)
 
 	query := `
-	SELECT f.friend_id, u.email FROM friendships f
-	WHERE f.user_id = $1 AND f.status = 'accepted'
-	JOIN users u ON u.id = f.friend_id;
-	`
+		SELECT f.friend_id, u.email
+		FROM friendships f
+		JOIN users u ON u.id = f.friend_id
+		WHERE f.user_id = $1 AND f.status = 'accepted';
+`
 
 	rows, err := t.DB.Query(ctx, query, body.UserID)
 
@@ -105,9 +106,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	// Create reminders for friends
 	for _, friend := range friends {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO reminders (name, user_id, title, body, type, execute_at, template, email)
+			INSERT INTO reminders (user_id, title, body, type, execute_at, template, email)
 			VALUES ($1, $2, $3, $4, $5, $6, $7);
-		`, body.Name, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email)
+		`, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email)
 		if err != nil {
 			return fmt.Errorf("create reminder for friend %d: %w", friend.ID, err)
 		}
@@ -115,9 +116,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 
 	// Optionally create a reminder for the user themselves:
 	_, err = tx.Exec(ctx, `
-		INSERT INTO reminders (name, user_id, title, body, type, execute_at, template, email)
+		INSERT INTO reminders (user_id, title, body, type, execute_at, template, email)
 		VALUES ($1, $2, $3, $4, $5, $6, $7);
-	`, body.Name, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, body.Email)
+	`, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, body.Email)
 	if err != nil {
 		return fmt.Errorf("create user reminder: %w", err)
 	}

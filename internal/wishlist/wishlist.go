@@ -52,9 +52,17 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
-	if body.Date == "" {
-		body.Date = userData.DateOfBirth.String()
+	if body.Date == nil {
+		body.Date = userData.DateOfBirth
 	}
+
+	//date, err := time.Parse("2006-01-02", body.Date)
+	//if err != nil {
+	//	helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusBadRequest, "invalid date passed", nil))
+	//	return
+	//}
+
+	//body.Date = date.Format("2006-01-02")
 
 	if body.NotifyBefore < 0 {
 		helpers.HandleError(responseWriter, helpers.ErrBadRequest)
@@ -72,32 +80,32 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 	data, err := h.Store.CreateWishlist(userData.ID, wishlist)
 
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
 	// create a scheduleDate using the calculated days before the birthday/due date and create a notification and send mails
-	scheduledDate, err := helpers.CalculateDaysBefore(wishlist.Date, wishlist.NotifyBefore)
+	scheduledDate, err := helpers.CalculateDaysBefore(wishlist.Date.Format("2006-01-02"), wishlist.NotifyBefore)
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
 	// create a task in the reminder table
 	reminderBody := reminder.CreateReminderBody{
-		Template:  "wishlist_reminder_mail",
-		Email:     userData.Email,
-		Name:      "Wishlist",
+		Template: "wishlist_reminder_mail",
+		Email:    userData.Email,
+		//Name:      "Wishlist",
 		UserID:    userData.ID,
 		Title:     "Wishlist Reminder",
-		Body:      fmt.Sprintf("%s created a wishlist for a special date %d. kindly check it out.", userData.Username, wishlist.Date),
+		Body:      fmt.Sprintf("%s created a wishlist for a special date %s. kindly check it out.", userData.Username, wishlist.Date.Format("2006-01-02")),
 		Type:      "wishlist_reminder", // wishlist_reminder reminder or birthday
 		ExecuteAt: &scheduledDate,
 	}
 
 	err = h.ReminderStore.CreateReminder(reminderBody)
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrInternalServerError)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 

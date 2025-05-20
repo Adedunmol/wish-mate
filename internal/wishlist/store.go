@@ -48,10 +48,12 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 	}
 	defer tx.Rollback(ctx)
 
+	//date, _ := time.Parse("2006-01-02", body.Date)
+
 	var wishlist WishlistResponse
 
-	query := `INSERT INTO wishlists (user_id, name, description, notify_before, date) 
-		VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, name, description, notify_before, date;`
+	query := `INSERT INTO wishlists (created_by, name, description, notify_before, date) 
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_by, name, description, notify_before, date;`
 
 	err = w.db.QueryRow(ctx, query, userID, body.Name, body.Description, body.NotifyBefore, body.Date).
 		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
@@ -97,7 +99,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	var wishlist WishlistResponse
 
-	query := `SELECT id, user_id, name, description, notify_before, date 
+	query := `SELECT id, created_by, name, description, notify_before, date 
 		FROM wishlists WHERE id = $1;`
 	err = w.db.QueryRow(ctx, query, wishlistID).
 		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
@@ -110,8 +112,10 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	var itemsQuery string
 
+	currentTime := time.Now()
+
 	if userID == wishlist.UserID {
-		if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+		if wishlist.Date.Before(currentTime) {
 			itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
 			FROM items i 
 			LEFT JOIN item_picks ip ON i.id = ip.item_id
@@ -180,8 +184,8 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 	var wishlists []WishlistResponse
 
-	query := `SELECT id, user_id, name, description, notify_before, date 
-		FROM wishlists WHERE user_id = $1;`
+	query := `SELECT id, created_by, name, description, notify_before, date 
+		FROM wishlists WHERE created_by = $1;`
 
 	rows, err := w.db.Query(ctx, query, userID)
 	if err != nil {
@@ -203,7 +207,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 
 		if isOwner {
 			// Owner: Show all items, picked and unpicked
-			if wishlist.Date <= fmt.Sprintf("%s", sql.NullString{String: "CURRENT_DATE", Valid: true}) {
+			if wishlist.Date.Before(time.Now()) {
 				itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
 					FROM items i 
 					LEFT JOIN item_picks ip ON i.id = ip.item_id
@@ -278,7 +282,7 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 
 	// Check if the user is the owner of the wishlist
 	var ownerID int
-	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
+	err = w.db.QueryRow(ctx, "SELECT created_by FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return WishlistResponse{}, helpers.ErrNotFound
@@ -295,7 +299,7 @@ func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWi
 	query := `UPDATE wishlists SET 
 		name = COALESCE(NULLIF($1, ''), name),
 		description = COALESCE(NULLIF($2, ''), description)
-		WHERE id = $3 RETURNING id, user_id, name, description, notify_before, date;`
+		WHERE id = $3 RETURNING id, created_by, name, description, notify_before, date;`
 
 	err = w.db.QueryRow(ctx, query, body.Name, body.Description, wishlistID).Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 	if err != nil {
@@ -324,7 +328,7 @@ func (w *WishlistStore) DeleteWishlistByID(wishlistID, userID int) error {
 
 	// Check if the user is the owner of the wishlist
 	var ownerID int
-	err = w.db.QueryRow(ctx, "SELECT user_id FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
+	err = w.db.QueryRow(ctx, "SELECT created_by FROM wishlists WHERE id = $1", wishlistID).Scan(&ownerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return helpers.ErrNotFound
