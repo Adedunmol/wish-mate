@@ -22,7 +22,7 @@ func WishlistRoutes(config config.Config) {
 	handler := Handler{Store: store, UserStore: userStore, ReminderStore: reminderStore}
 
 	wishlistRouter.Post("/", http.HandlerFunc(handler.CreateWishlist))
-	wishlistRouter.Get("/", http.HandlerFunc(handler.GetAllWishlists))
+	wishlistRouter.Get("/users/{user_id}", http.HandlerFunc(handler.GetAllWishlists))
 	wishlistRouter.Get("/{id}", http.HandlerFunc(handler.GetWishlist))
 	wishlistRouter.Patch("/{id}", http.HandlerFunc(handler.UpdateWishlist))
 	wishlistRouter.Delete("/{id}", http.HandlerFunc(handler.DeleteWishlist))

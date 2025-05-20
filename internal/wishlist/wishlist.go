@@ -155,7 +155,7 @@ func (h *Handler) GetAllWishlists(responseWriter http.ResponseWriter, request *h
 	wishlists, err := h.Store.GetUserWishlists(newUserID, newCurrentUserID == newUserID)
 
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrNotFound)
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 

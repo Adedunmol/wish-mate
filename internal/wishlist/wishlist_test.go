@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type StubUserStore struct {
@@ -313,9 +314,10 @@ func (s *StubWishlistStore) CreateItem(userID, wishlistID int, body *wishlist.It
 }
 
 func TestCreateWishlist(t *testing.T) {
+	currentTime := time.Now()
 	store := StubWishlistStore{wishlists: make([]wishlist.WishlistResponse, 0)}
 	userStore := StubUserStore{users: []auth.User{
-		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola", DateOfBirth: "2020-01-01"},
+		{ID: 1, FirstName: "Adedunmola", LastName: "Oyewale", Password: "password", Email: "adedunmola@gmail.com", Username: "Adedunmola", DateOfBirth: &currentTime},
 	}}
 	server := wishlist.Handler{Store: &store, UserStore: &userStore}
 

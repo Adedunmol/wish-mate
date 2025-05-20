@@ -187,11 +187,12 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 	query := `SELECT id, created_by, name, description, notify_before, date 
 		FROM wishlists WHERE created_by = $1;`
 
-	rows, err := w.db.Query(ctx, query, userID)
+	rows, err := tx.Query(ctx, query, userID)
 	if err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error fetching wishlists: %w", err)
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -222,7 +223,7 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
 		}
 
-		itemRows, err := w.db.Query(ctx, itemsQuery, wishlist.ID)
+		itemRows, err := tx.Query(ctx, itemsQuery, wishlist.ID)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error fetching items: %w", err)
