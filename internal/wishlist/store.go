@@ -116,7 +116,7 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	if userID == wishlist.UserID {
 		if wishlist.Date.Before(currentTime) {
-			itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
+			itemsQuery = `SELECT i.id, i.name, i.description, u.id, u.username, u.first_name, u.last_name
 			FROM items i 
 			LEFT JOIN item_picks ip ON i.id = ip.item_id
 			LEFT JOIN users u ON ip.user_id = u.id
@@ -182,34 +182,41 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 	}
 	defer tx.Rollback(ctx)
 
-	var wishlists []WishlistResponse
-
-	query := `SELECT id, created_by, name, description, notify_before, date 
-		FROM wishlists WHERE created_by = $1;`
-
+	// Step 1: Fetch all wishlists
+	query := `SELECT id, created_by, name, description, notify_before, date FROM wishlists WHERE created_by = $1;`
 	rows, err := tx.Query(ctx, query, userID)
 	if err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return nil, fmt.Errorf("error fetching wishlists: %w", err)
 	}
-
 	defer rows.Close()
 
+	type wishlistData struct {
+		Wishlist WishlistResponse
+	}
+
+	var all []wishlistData
+
 	for rows.Next() {
-		var wishlist WishlistResponse
-		err := rows.Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
+		var wl WishlistResponse
+		err := rows.Scan(&wl.ID, &wl.UserID, &wl.Name, &wl.Description, &wl.NotifyBefore, &wl.Date)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error scanning wishlist: %w", err)
 		}
+		wl.Items = []ItemResponse{}
+		all = append(all, wishlistData{Wishlist: wl})
+	}
 
-		wishlist.Items = []ItemResponse{}
+	// Step 2: Loop and fetch items for each wishlist after `rows` is fully closed
+	for i := range all {
+		wishlist := &all[i].Wishlist
 		var itemsQuery string
 
 		if isOwner {
-			// Owner: Show all items, picked and unpicked
 			if wishlist.Date.Before(time.Now()) {
-				itemsQuery = `SELECT i.id, i.name, i.description, i.price, u.id, u.username, u.first_name, u.last_name
+				itemsQuery = `
+					SELECT i.id, i.name, i.description, i.link, u.id, u.username, u.first_name, u.last_name
 					FROM items i 
 					LEFT JOIN item_picks ip ON i.id = ip.item_id
 					LEFT JOIN users u ON ip.user_id = u.id
@@ -218,9 +225,8 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 				itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
 			}
 		} else {
-			// Non-owner: Show only unpicked items
-			itemsQuery = `SELECT id, name, description, link FROM items 
-				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
+			itemsQuery = `SELECT id, name, description, link FROM items
+							WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
 		}
 
 		itemRows, err := tx.Query(ctx, itemsQuery, wishlist.ID)
@@ -228,36 +234,32 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 			err = errors.Join(helpers.ErrInternalServerError, err)
 			return nil, fmt.Errorf("error fetching items: %w", err)
 		}
-		defer itemRows.Close()
 
 		for itemRows.Next() {
 			var item ItemResponse
-			var user auth.User
 			var userID sql.NullInt64
-			var username sql.NullString
-			var firstName sql.NullString
-			var lastName sql.NullString
+			var username, firstName, lastName sql.NullString
 
 			err := itemRows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
 			if err != nil {
+				itemRows.Close()
 				err = errors.Join(helpers.ErrInternalServerError, err)
 				return nil, fmt.Errorf("error scanning item: %w", err)
 			}
 
 			if userID.Valid {
-				user = auth.User{
+				item.PickedBy = auth.User{
 					ID:        int(userID.Int64),
 					Username:  username.String,
 					FirstName: firstName.String,
 					LastName:  lastName.String,
 				}
-				item.PickedBy = user
 			}
 
 			wishlist.Items = append(wishlist.Items, item)
 		}
 
-		wishlists = append(wishlists, wishlist)
+		itemRows.Close()
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -265,7 +267,11 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		return nil, fmt.Errorf("commit tx: %w", err)
 	}
 
-	return wishlists, nil
+	var result []WishlistResponse
+	for _, w := range all {
+		result = append(result, w.Wishlist)
+	}
+	return result, nil
 }
 
 func (w *WishlistStore) UpdateWishlistByID(wishlistID, userID int, body UpdateWishlist) (WishlistResponse, error) {
