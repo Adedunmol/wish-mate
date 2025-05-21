@@ -498,7 +498,7 @@ func (w *WishlistStore) CreateItem(userID, wishlistID int, body *Item) (ItemResp
 	query := `INSERT INTO items (name, description, link, created_by, wishlist_id) 
 		VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, link, wishlist_id;`
 
-	err = w.db.QueryRow(ctx, query, body.Name, body.Description, body.Link, userID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.WishlistID)
+	err = tx.QueryRow(ctx, query, body.Name, body.Description, body.Link, userID, wishlistID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.WishlistID)
 	if err != nil {
 		return ItemResponse{}, fmt.Errorf("error inserting wishlist: %w", err)
 	}

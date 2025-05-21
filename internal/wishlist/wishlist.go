@@ -363,6 +363,22 @@ func (h *Handler) CreateItemHandler(responseWriter http.ResponseWriter, request 
 
 	newUserID := userID.(int)
 
+	wishlist, err := h.Store.GetWishlistByID(newWishlistID, newUserID)
+
+	if err != nil {
+		if errors.Is(err, ErrNoWishlistFound) {
+			helpers.HandleError(responseWriter, helpers.ErrNotFound)
+			return
+		}
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
+		return
+	}
+
+	if wishlist.UserID != newUserID {
+		helpers.HandleError(responseWriter, helpers.ErrForbidden)
+		return
+	}
+
 	item, err := h.Store.CreateItem(newUserID, newWishlistID, body)
 	if err != nil {
 		helpers.HandleError(responseWriter, err)
