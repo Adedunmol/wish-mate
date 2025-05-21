@@ -85,8 +85,9 @@ func (w *WishlistStore) CreateWishlist(userID int, body Wishlist) (WishlistRespo
 	return wishlist, nil
 }
 
-func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistResponse, error) {
+var ErrNoWishlistFound = errors.New("no wishlist found")
 
+func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -101,74 +102,32 @@ func (w *WishlistStore) GetWishlistByID(wishlistID, userID int) (WishlistRespons
 
 	query := `SELECT id, created_by, name, description, notify_before, date 
 		FROM wishlists WHERE id = $1;`
-	err = w.db.QueryRow(ctx, query, wishlistID).
+	err = tx.QueryRow(ctx, query, wishlistID).
 		Scan(&wishlist.ID, &wishlist.UserID, &wishlist.Name, &wishlist.Description, &wishlist.NotifyBefore, &wishlist.Date)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return WishlistResponse{}, ErrNoWishlistFound
+		}
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("error fetching wishlist: %w", err)
 	}
 
-	wishlist.Items = make([]ItemResponse, 0)
+	isOwner := userID == wishlist.UserID
+	isPast := wishlist.Date.Before(time.Now())
 
-	var itemsQuery string
-
-	currentTime := time.Now()
-
-	if userID == wishlist.UserID {
-		if wishlist.Date.Before(currentTime) {
-			itemsQuery = `SELECT i.id, i.name, i.description, u.id, u.username, u.first_name, u.last_name
-			FROM items i 
-			LEFT JOIN item_picks ip ON i.id = ip.item_id
-			LEFT JOIN users u ON ip.user_id = u.id
-			WHERE i.wishlist_id = $1;`
-		} else {
-			itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
-		}
-	} else {
-		itemsQuery = `SELECT id, name, description, link FROM items 
-				WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
-	}
-
-	rows, err := w.db.Query(ctx, itemsQuery, wishlistID)
+	items, err := fetchItemsForWishlist(ctx, tx, wishlist.ID, isOwner, isPast)
 	if err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
-		return WishlistResponse{}, fmt.Errorf("error fetching items: %w", err)
+		return WishlistResponse{}, fmt.Errorf("fetch items: %w", err)
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item ItemResponse
-		var user auth.User
-		var userID sql.NullInt64
-		var username sql.NullString
-		var firstName sql.NullString
-		var lastName sql.NullString
-
-		err = rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
-		if err != nil {
-			err = errors.Join(helpers.ErrInternalServerError, err)
-			return WishlistResponse{}, fmt.Errorf("error scanning item: %w", err)
-		}
-
-		if userID.Valid {
-			user = auth.User{
-				ID:        int(userID.Int64),
-				Username:  username.String,
-				FirstName: firstName.String,
-				LastName:  lastName.String,
-			}
-			item.PickedBy = &user
-		}
-
-		wishlist.Items = append(wishlist.Items, item)
-	}
+	wishlist.Items = items
 
 	if err := tx.Commit(ctx); err != nil {
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return WishlistResponse{}, fmt.Errorf("commit tx: %w", err)
 	}
 
-	return WishlistResponse{}, nil
+	return wishlist, nil
 }
 
 func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistResponse, error) {
@@ -208,58 +167,17 @@ func (w *WishlistStore) GetUserWishlists(userID int, isOwner bool) ([]WishlistRe
 		all = append(all, wishlistData{Wishlist: wl})
 	}
 
-	// Step 2: Loop and fetch items for each wishlist after `rows` is fully closed
+	// Step 2: Loop and fetch items for each wishlist
 	for i := range all {
 		wishlist := &all[i].Wishlist
-		var itemsQuery string
+		isPast := wishlist.Date.Before(time.Now())
 
-		if isOwner {
-			if wishlist.Date.Before(time.Now()) {
-				itemsQuery = `
-					SELECT i.id, i.name, i.description, i.link, u.id, u.username, u.first_name, u.last_name
-					FROM items i 
-					LEFT JOIN item_picks ip ON i.id = ip.item_id
-					LEFT JOIN users u ON ip.user_id = u.id
-					WHERE i.wishlist_id = $1;`
-			} else {
-				itemsQuery = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
-			}
-		} else {
-			itemsQuery = `SELECT id, name, description, link FROM items
-							WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
-		}
-
-		itemRows, err := tx.Query(ctx, itemsQuery, wishlist.ID)
+		items, err := fetchItemsForWishlist(ctx, tx, wishlist.ID, isOwner, isPast)
 		if err != nil {
 			err = errors.Join(helpers.ErrInternalServerError, err)
-			return nil, fmt.Errorf("error fetching items: %w", err)
+			return nil, fmt.Errorf("fetch items: %w", err)
 		}
-
-		for itemRows.Next() {
-			var item ItemResponse
-			var userID sql.NullInt64
-			var username, firstName, lastName sql.NullString
-
-			err := itemRows.Scan(&item.ID, &item.Name, &item.Description, &item.Link, &userID, &username, &firstName, &lastName)
-			if err != nil {
-				itemRows.Close()
-				err = errors.Join(helpers.ErrInternalServerError, err)
-				return nil, fmt.Errorf("error scanning item: %w", err)
-			}
-
-			if userID.Valid {
-				item.PickedBy = &auth.User{
-					ID:        int(userID.Int64),
-					Username:  username.String,
-					FirstName: firstName.String,
-					LastName:  lastName.String,
-				}
-			}
-
-			wishlist.Items = append(wishlist.Items, item)
-		}
-
-		itemRows.Close()
+		wishlist.Items = items
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -591,4 +509,68 @@ func (w *WishlistStore) CreateItem(userID, wishlistID int, body *Item) (ItemResp
 	}
 
 	return item, nil
+}
+
+func fetchItemsForWishlist(
+	ctx context.Context,
+	tx pgx.Tx,
+	wishlistID int,
+	isOwner bool,
+	isPast bool,
+) ([]ItemResponse, error) {
+	var items []ItemResponse
+	var query string
+	includePickedInfo := false
+
+	if isOwner && isPast {
+		query = `
+			SELECT i.id, i.name, i.description, i.link, u.id, u.username, u.first_name, u.last_name
+			FROM items i
+			LEFT JOIN item_picks ip ON i.id = ip.item_id
+			LEFT JOIN users u ON ip.user_id = u.id
+			WHERE i.wishlist_id = $1;`
+		includePickedInfo = true
+	} else if isOwner {
+		query = `SELECT id, name, description, link FROM items WHERE wishlist_id = $1;`
+	} else {
+		query = `
+			SELECT id, name, description, link FROM items
+			WHERE wishlist_id = $1 AND id NOT IN (SELECT item_id FROM item_picks);`
+	}
+
+	rows, err := tx.Query(ctx, query, wishlistID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching items: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item ItemResponse
+		if includePickedInfo {
+			var pickedByID sql.NullInt64
+			var username, firstName, lastName sql.NullString
+
+			if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link,
+				&pickedByID, &username, &firstName, &lastName); err != nil {
+				return nil, fmt.Errorf("error scanning item with picked info: %w", err)
+			}
+
+			if pickedByID.Valid {
+				item.PickedBy = &auth.User{
+					ID:        int(pickedByID.Int64),
+					Username:  username.String,
+					FirstName: firstName.String,
+					LastName:  lastName.String,
+				}
+			}
+		} else {
+			if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Link); err != nil {
+				return nil, fmt.Errorf("error scanning item: %w", err)
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
 }

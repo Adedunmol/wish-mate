@@ -197,7 +197,11 @@ func (h *Handler) GetWishlist(responseWriter http.ResponseWriter, request *http.
 	wishlist, err := h.Store.GetWishlistByID(wishlistID, newUserID)
 
 	if err != nil {
-		helpers.HandleError(responseWriter, helpers.ErrNotFound)
+		if errors.Is(err, ErrNoWishlistFound) {
+			helpers.HandleError(responseWriter, helpers.ErrNotFound)
+			return
+		}
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
