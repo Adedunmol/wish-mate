@@ -400,7 +400,7 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 	// Ensure item is not already picked
 	var existingItemID int
 
-	err = w.db.QueryRow(ctx, "SELECT id FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingItemID)
+	err = tx.QueryRow(ctx, "SELECT id FROM items WHERE id = $1 AND wishlist_id = $2", itemID, wishlistID).Scan(&existingItemID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ItemResponse{}, helpers.ErrNotFound
@@ -411,20 +411,28 @@ func (w *WishlistStore) PickItem(wishlistID, itemID, userID int) (ItemResponse, 
 
 	pickedQuery := `SELECT item_id FROM item_picks WHERE item_id = $1 LIMIT 1;`
 
-	err = w.db.QueryRow(ctx, pickedQuery, itemID).Scan(&existingItemID)
+	err = tx.QueryRow(ctx, pickedQuery, itemID).Scan(&existingItemID)
 	if err == nil {
 		return ItemResponse{}, helpers.ErrConflict
 	}
 
-	query := `INSERT INTO item_picks (item_id, user_id) VALUES ($1, $2) RETURNING id, name, description, link;`
+	query := `INSERT INTO item_picks (item_id, user_id) VALUES ($1, $2);`
 
-	err = w.db.QueryRow(ctx, query, userID, itemID).Scan(&item.ID, &item.Name, &item.Description, &item.Link)
+	_, err = tx.Exec(ctx, query, itemID, userID)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == UniqueViolation {
 			return ItemResponse{}, helpers.ErrConflict
 		}
 		return ItemResponse{}, fmt.Errorf("error picking item: %w", err)
+	}
+
+	query = `UPDATE items SET taken = true WHERE id = $1 RETURNING id, name, description, link, taken;`
+
+	err = tx.QueryRow(ctx, query, itemID).Scan(&item.ID, &item.Name, &item.Description, &item.Link, &item.Taken)
+	if err != nil {
+		err = errors.Join(helpers.ErrInternalServerError, err)
+		return ItemResponse{}, fmt.Errorf("error updating item: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -450,24 +458,14 @@ func (w *WishlistStore) DeleteItem(wishlistID, itemID int) error {
 	query := "DELETE FROM items WHERE id = $1 AND wishlist_id = $2"
 	result, err := w.db.Exec(ctx, query, itemID, wishlistID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return helpers.ErrNotFound
+		}
 		err = errors.Join(helpers.ErrInternalServerError, err)
 		return fmt.Errorf("error deleting item: %w", err)
 	}
 
 	rowsAffected := result.RowsAffected()
-
-	if rowsAffected == 0 {
-		return helpers.ErrNotFound
-	}
-
-	query = "DELETE FROM item_picks WHERE id = $1 AND wishlist_id = $2"
-	result, err = w.db.Exec(ctx, query, itemID, wishlistID)
-	if err != nil {
-		err = errors.Join(helpers.ErrInternalServerError, err)
-		return fmt.Errorf("error deleting item from join table: %w", err)
-	}
-
-	rowsAffected = result.RowsAffected()
 
 	if rowsAffected == 0 {
 		return helpers.ErrNotFound

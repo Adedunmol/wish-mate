@@ -489,6 +489,7 @@ func (h *Handler) DeleteItemHandler(responseWriter http.ResponseWriter, request 
 
 	err = h.Store.DeleteItem(newWishlistID, newItemID)
 	if err != nil {
+
 		helpers.HandleError(responseWriter, err)
 		return
 	}
@@ -620,7 +621,11 @@ func (h *Handler) PickWishlistItemHandler(responseWriter http.ResponseWriter, re
 	data, err := h.Store.PickItem(newWishlistID, newItemID, newUserID)
 
 	if err != nil {
-		helpers.HandleError(responseWriter, err)
+		if errors.Is(err, helpers.ErrConflict) {
+			helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusConflict, "item has been picked already", nil))
+			return
+		}
+		helpers.HandleError(responseWriter, helpers.NewHTTPError(err, http.StatusInternalServerError, "internal server error", nil))
 		return
 	}
 
