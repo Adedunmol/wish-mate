@@ -49,7 +49,7 @@ func (t *ReminderStore) DeleteReminder(sourceType, sourceID int) error {
 	defer tx.Rollback(ctx)
 
 	query := `
-	DELETE FROM reminders WHERE source_type and source_id = $1;
+	DELETE FROM reminders WHERE source_type = $1 and source_id = $2;
 	`
 
 	_, err = t.DB.Query(ctx, query, sourceType, sourceID)
