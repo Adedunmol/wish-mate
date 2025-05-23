@@ -52,10 +52,10 @@ func GetReminders(store Store, currentTime *time.Time) ([]ReminderResponse, erro
 	return tasks, nil
 }
 
-func GetBirthdays(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
+func CreateBirthdayReminders(store Store, currentTime *time.Time) ([]ReminderResponse, error) {
 	tasks, err := store.GetBirthdays(currentTime)
 	if err != nil {
-		return nil, fmt.Errorf("error getting tasks: %v", err)
+		return nil, fmt.Errorf("error creating birthday reminders: %v", err)
 	}
 
 	return tasks, nil
@@ -109,53 +109,6 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 
 		if err != nil {
 			return fmt.Errorf("error updating task: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func EnqueueBirthdays(store Store, q queue.Queue, currentTime *time.Time) error {
-
-	tasks, err := GetBirthdays(store, currentTime)
-	if err != nil {
-		return fmt.Errorf("error getting birthdays: %v", err)
-	}
-
-	for _, task := range tasks {
-
-		err = q.Enqueue(&queue.TaskPayload{
-			Type: queue.TypeNotificationDelivery,
-			Payload: map[string]interface{}{
-				"id":      task.ID,
-				"user_id": task.UserID,
-				"title":   task.Title,
-				"body":    task.Body,
-				"type":    task.Type,
-			},
-		})
-
-		if err != nil {
-			log.Printf("error enqueuing scheduled task: %s : %v", err, task)
-		}
-
-		err = q.Enqueue(&queue.TaskPayload{
-			Type: queue.TypeEmailDelivery,
-			Payload: map[string]interface{}{
-				"template": task.Template,
-				"subject":  "Birthday",
-				"email":    task.Email,
-				"data":     "",
-				// embed the data below into a map and then pass into data
-				//"id":       task.ID,
-				//"user_id":  task.UserID,
-				//"title":    task.Title,
-				//"body":     task.Title,
-				//"type":     task.Type,
-			},
-		})
-		if err != nil {
-			log.Printf("error enqueuing scheduled task: %s : %v", err, task)
 		}
 	}
 

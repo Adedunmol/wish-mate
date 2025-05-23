@@ -8,14 +8,16 @@ import (
 )
 
 type CreateReminderBody struct {
-	Template  string     `json:"template"`
-	Name      string     `json:"name"`
-	Email     string     `json:"email"`
-	UserID    int        `json:"user_id"`
-	Title     string     `json:"title"`
-	Body      string     `json:"body"`
-	Type      string     `json:"type"` // wishlist_reminder // todo: event_reminder
-	ExecuteAt *time.Time `json:"execute_at"`
+	Template   string     `json:"template"`
+	SourceType string     `json:"source_type"`
+	SourceId   string     `json:"source_id"`
+	Name       string     `json:"name"`
+	Email      string     `json:"email"`
+	UserID     int        `json:"user_id"`
+	Title      string     `json:"title"`
+	Body       string     `json:"body"`
+	Type       string     `json:"type"` // wishlist_reminder // todo: event_reminder
+	ExecuteAt  *time.Time `json:"execute_at"`
 }
 
 type Store interface {
@@ -102,9 +104,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	// Create reminders for friends
 	for _, friend := range friends {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO reminders (user_id, title, body, type, execute_at, template, email)
-			VALUES ($1, $2, $3, $4, $5, $6, $7);
-		`, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email)
+			INSERT INTO reminders (user_id, title, body, type, execute_at, template, email, source_type, source_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+		`, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email, body.SourceType, body.SourceId)
 		if err != nil {
 			return fmt.Errorf("create reminder for friend %d: %w", friend.ID, err)
 		}
@@ -112,9 +114,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 
 	// Optionally create a reminder for the user themselves:
 	_, err = tx.Exec(ctx, `
-		INSERT INTO reminders (user_id, title, body, type, execute_at, template, email)
+		INSERT INTO reminders (user_id, title, body, type, execute_at, template, email, source_type, source_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7);
-	`, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, body.Email)
+	`, body.UserID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, body.Email, body.SourceType, body.SourceId)
 	if err != nil {
 		return fmt.Errorf("create user reminder: %w", err)
 	}
@@ -142,7 +144,7 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 `
 	var reminders []ReminderResponse
 
-	rows, err := t.DB.Query(ctx, query)
+	rows, err := tx.Query(ctx, query)
 
 	if err != nil {
 		return nil, fmt.Errorf("error querying reminders: %v", err)
@@ -204,8 +206,8 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	// now := time.Now()
 
 	insertQuery := `
-		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at, source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'birthday')
 		RETURNING id;
 	`
 
@@ -224,7 +226,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		body := "Wish " + birthdayUserName + " a fantastic birthday today!"
 		reminderType := "birthday"
 		status := "pending"
-		template := "birthday_reminder_mail.html" // your HTML file name
+		template := "birthday_reminder_mail.html"
 
 		var id int
 		err = tx.QueryRow(ctx, insertQuery,

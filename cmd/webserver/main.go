@@ -130,8 +130,8 @@ func enqueueReminders(client *queue.Client, db *pgx.Conn) {
 	// get today's birthdays and send notifications and mails to their friends
 	log.Printf("checking birthdays due today: %v", currentTime.UTC())
 
-	if err := reminder.EnqueueBirthdays(taskStore, client, &currentTime); err != nil {
-		log.Print(fmt.Errorf("error enqeueing birthdays: %w", err))
+	if _, err := reminder.CreateBirthdayReminders(taskStore, &currentTime); err != nil {
+		log.Print(fmt.Errorf("error creating birthday reminders: %w", err))
 	}
 
 	// check db for reminders where scheduled = pending AND scheduled_at <= now
