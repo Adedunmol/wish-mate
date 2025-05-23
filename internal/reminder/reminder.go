@@ -66,35 +66,43 @@ func CreateBirthdayReminders(store Store, currentTime *time.Time) ([]ReminderRes
 func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error {
 
 	// this should send in reminders and the details of the users to send the reminders to
-	tasks, err := GetReminders(store, currentTime)
+	reminders, err := GetReminders(store, currentTime)
 	if err != nil {
-		return fmt.Errorf("error getting tasks: %v", err)
+		return fmt.Errorf("error getting reminders: %v", err)
 	}
 
-	for _, task := range tasks {
+	for _, reminder := range reminders {
 
 		err := q.Enqueue(&queue.TaskPayload{
-			Type: queue.TypeNotificationDelivery,
+			Type:    queue.TypeNotificationDelivery,
 			Payload: map[string]interface{}{
-				"id":      task.ID,
-				"user_id": task.UserID,
-				"title":   task.Title,
-				"body":    task.Title,
-				"type":    task.Type,
+				//"id":      task.ID,
+				//"user_id": task.UserID,
+				//"title":   task.Title,
+				//"body":    task.Title,
+				//"type":    task.Type,
 			},
 		})
 
 		if err != nil {
-			log.Printf("error enqueuing scheduled task: %s : %v", err, task)
+			log.Printf("error enqueuing scheduled reminder (notification): %s : %v", err, reminder)
 		}
 
 		err = q.Enqueue(&queue.TaskPayload{
 			Type: queue.TypeEmailDelivery,
 			Payload: map[string]interface{}{
-				"template": "reminder_mail",
-				"subject":  "Wishlist Reminder",
-				"email":    task.Email,
-				"data":     "",
+				"template": reminder.Template,
+				"subject":  reminder.Title,
+				"email":    reminder.Email,
+				"data": struct {
+					Username   string
+					Code       string
+					Expiration int
+				}{
+					Username:   "",
+					Code:       "",
+					Expiration: 0,
+				},
 				// embed the data below into a map and then pass into data
 				//"id":       task.ID,
 				//"user_id":  task.UserID,
@@ -104,13 +112,13 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 			},
 		})
 		if err != nil {
-			log.Printf("error enqueuing scheduled task: %s : %v", err, task)
+			log.Printf("error enqueuing scheduled reminder (email notification): %s : %v", err, reminder)
 		}
 
-		err = store.UpdateReminder(task.ID)
+		err = store.UpdateReminder(reminder.ID)
 
 		if err != nil {
-			return fmt.Errorf("error updating task: %v", err)
+			return fmt.Errorf("error updating reminder: %v", err)
 		}
 	}
 
