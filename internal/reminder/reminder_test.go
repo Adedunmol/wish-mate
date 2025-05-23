@@ -179,7 +179,7 @@ func DeleteReminder(t *testing.T) {
 
 	t.Run("delete a task", func(t *testing.T) {
 
-		err := reminder.DeleteReminder(store, 1)
+		err := reminder.DeleteReminder(store, "birthday", 1)
 		if err != nil {
 			t.Error("error should be nil")
 		}
@@ -191,7 +191,7 @@ func DeleteReminder(t *testing.T) {
 
 	t.Run("return error for no task found with id", func(t *testing.T) {
 
-		err := reminder.DeleteReminder(store, 10)
+		err := reminder.DeleteReminder(store, "birthday", 10)
 
 		if err == nil {
 			t.Error("error should not be nil for no task found with id")

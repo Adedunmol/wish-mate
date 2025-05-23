@@ -117,11 +117,11 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 	return nil
 }
 
-func DeleteReminder(store Store, id int) error {
-	err := store.DeleteReminder(id)
+func DeleteReminder(store Store, sourceType string, sourceId int) error {
+	err := store.DeleteReminder(sourceType, sourceId)
 
 	if err != nil {
-		return fmt.Errorf("error deleting task: %v", err)
+		return fmt.Errorf("error deleting reminder: %v", err)
 	}
 
 	return nil
