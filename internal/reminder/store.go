@@ -25,7 +25,7 @@ type Store interface {
 	GetReminders(currentTime *time.Time) ([]ReminderResponse, error)
 	GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error)
 	UpdateReminder(ID int) error
-	DeleteReminder(sourceType, sourceID int) error
+	DeleteReminder(sourceType string, sourceID int) error
 }
 
 type ReminderStore struct {
@@ -37,7 +37,7 @@ func NewReminderStore(db *pgx.Conn) ReminderStore {
 	return ReminderStore{DB: db}
 }
 
-func (t *ReminderStore) DeleteReminder(sourceType, sourceID int) error {
+func (t *ReminderStore) DeleteReminder(sourceType string, sourceID int) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

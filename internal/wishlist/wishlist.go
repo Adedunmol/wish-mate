@@ -309,7 +309,7 @@ func (h *Handler) DeleteWishlist(responseWriter http.ResponseWriter, request *ht
 	}
 
 	// delete scheduled job for the wishlist
-	err = h.ReminderStore.DeleteReminder(wishlistID)
+	err = h.ReminderStore.DeleteReminder("wishlist", wishlistID)
 
 	if err != nil {
 		helpers.HandleError(responseWriter, err)

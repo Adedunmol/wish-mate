@@ -10,15 +10,17 @@ import (
 )
 
 type ReminderResponse struct {
-	ID        int        `json:"id"`
-	UserID    int        `json:"user_id"`
-	Email     string     `json:"email"`
-	Title     string     `json:"title"`
-	Body      string     `json:"body"`
-	Type      string     `json:"type"`
-	Status    string     `json:"status"`
-	Template  string     `json:"template"`
-	ExecuteAt *time.Time `json:"execute_at"`
+	ID         int        `json:"id"`
+	UserID     int        `json:"user_id"`
+	Email      string     `json:"email"`
+	Title      string     `json:"title"`
+	Body       string     `json:"body"`
+	Type       string     `json:"type"`
+	Status     string     `json:"status"`
+	Template   string     `json:"template"`
+	SourceType string     `json:"source_type"`
+	SourceId   int        `json:"source_id"`
+	ExecuteAt  *time.Time `json:"execute_at"`
 }
 
 func CreateReminder(store Store, body CreateReminderBody) error {
