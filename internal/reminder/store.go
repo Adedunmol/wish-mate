@@ -25,7 +25,7 @@ type Store interface {
 	GetReminders(currentTime *time.Time) ([]ReminderResponse, error)
 	GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error)
 	UpdateReminder(ID int) error
-	DeleteReminder(ID int) error
+	DeleteReminder(sourceType, sourceID int) error
 }
 
 type ReminderStore struct {
@@ -37,7 +37,7 @@ func NewReminderStore(db *pgx.Conn) ReminderStore {
 	return ReminderStore{DB: db}
 }
 
-func (t *ReminderStore) DeleteReminder(ID int) error {
+func (t *ReminderStore) DeleteReminder(sourceType, sourceID int) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -49,10 +49,10 @@ func (t *ReminderStore) DeleteReminder(ID int) error {
 	defer tx.Rollback(ctx)
 
 	query := `
-	DELETE FROM reminders WHERE id = $1;
+	DELETE FROM reminders WHERE source_type and source_id = $1;
 	`
 
-	_, err = t.DB.Query(ctx, query, ID)
+	_, err = t.DB.Query(ctx, query, sourceType, sourceID)
 
 	if err != nil {
 		return fmt.Errorf("error deleting reminder: %w", err)
