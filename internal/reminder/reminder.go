@@ -74,13 +74,13 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 	for _, reminder := range reminders {
 
 		err := q.Enqueue(&queue.TaskPayload{
-			Type:    queue.TypeNotificationDelivery,
+			Type: queue.TypeNotificationDelivery,
 			Payload: map[string]interface{}{
-				//"id":      task.ID,
-				//"user_id": task.UserID,
-				//"title":   task.Title,
-				//"body":    task.Title,
-				//"type":    task.Type,
+				"id":      reminder.ID,
+				"user_id": reminder.UserID,
+				"title":   reminder.Title,
+				"body":    reminder.Title,
+				"type":    reminder.Type,
 			},
 		})
 
@@ -97,9 +97,11 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 				"data": struct {
 					Username   string
 					Code       string
+					FriendName string
 					Expiration int
 				}{
 					Username:   "",
+					FriendName: "",
 					Code:       "",
 					Expiration: 0,
 				},

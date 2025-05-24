@@ -12,11 +12,11 @@ import (
 const TypeNotificationDelivery = "notification:deliver"
 
 type NotificationDeliveryPayload struct {
-	ID     int
-	UserID int
-	Title  string
-	Body   string
-	Type   string
+	ID     int    `json:"id"`
+	UserID int    `json:"user_id"`
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+	Type   string `json:"type"`
 }
 
 func (e *NotificationDeliveryPayload) NewTask() (*asynq.Task, error) {
