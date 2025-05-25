@@ -10,17 +10,20 @@ import (
 )
 
 type ReminderResponse struct {
-	ID         int        `json:"id"`
-	UserID     int        `json:"user_id"`
-	Email      string     `json:"email"`
-	Title      string     `json:"title"`
-	Body       string     `json:"body"`
-	Type       string     `json:"type"`
-	Status     string     `json:"status"`
-	Template   string     `json:"template"`
-	SourceType string     `json:"source_type"`
-	SourceId   int        `json:"source_id"`
-	ExecuteAt  *time.Time `json:"execute_at"`
+	ID             int        `json:"id"`
+	UserID         int        `json:"user_id"`
+	Email          string     `json:"email"`
+	Username       string     `json:"username"`
+	Title          string     `json:"title"`
+	Body           string     `json:"body"`
+	Type           string     `json:"type"`
+	Status         string     `json:"status"`
+	Template       string     `json:"template"`
+	SourceType     string     `json:"source_type"`
+	SourceId       int        `json:"source_id"`
+	FriendName     string     `json:"friend_name"`
+	FriendUsername string     `json:"friend_username"`
+	ExecuteAt      *time.Time `json:"execute_at"`
 }
 
 func CreateReminder(store Store, body CreateReminderBody) error {
@@ -95,22 +98,15 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 				"subject":  reminder.Title,
 				"email":    reminder.Email,
 				"data": struct {
-					Username   string
-					Code       string
-					FriendName string
-					Expiration int
+					Username       string
+					FriendName     string
+					FriendUsername string
+					Expiration     int
 				}{
-					Username:   "",
-					FriendName: "",
-					Code:       "",
-					Expiration: 0,
+					Username:       reminder.Username,
+					FriendName:     reminder.FriendName,
+					FriendUsername: reminder.FriendUsername,
 				},
-				// embed the data below into a map and then pass into data
-				//"id":       task.ID,
-				//"user_id":  task.UserID,
-				//"title":    task.Title,
-				//"body":     task.Title,
-				//"type":     task.Type,
 			},
 		})
 		if err != nil {
