@@ -190,8 +190,10 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		SELECT 
 			f.friend_id AS user_id, 
 			u2.email AS email,
+			u2.username AS username,
 			u1.id AS birthday_user_id,
-			u1.first_name || ' ' || u1.last_name AS birthday_user_name
+			u1.username AS birthday_user_name,
+			u1.first_name || ' ' || u1.last_name AS birthday_name
 		FROM friendships f
 		JOIN users u1 ON u1.id = f.user_id
 		JOIN users u2 ON u2.id = f.friend_id
@@ -210,8 +212,8 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	// now := time.Now()
 
 	insertQuery := `
-		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at, source_type)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'birthday')
+		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at, source_type, friend_name, friend_username, username)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'birthday', $10, $11, $12)
 		RETURNING id;
 	`
 
@@ -220,8 +222,10 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		var email string
 		var birthdayUserID int
 		var birthdayUserName string
+		var birthdayName string
+		var username string
 
-		err := rows.Scan(&userID, &email, &birthdayUserID, &birthdayUserName)
+		err := rows.Scan(&userID, &email, &username, &birthdayUserID, &birthdayUserName, &birthdayName, &birthdayUserName, &birthdayName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
@@ -234,21 +238,24 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 
 		var id int
 		err = tx.QueryRow(ctx, insertQuery,
-			userID, email, title, body, reminderType, status, template, currentTime).Scan(&id)
+			userID, email, title, body, reminderType, status, template, currentTime, "birthday", birthdayName, birthdayUserName, username).Scan(&id)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting reminder: %w", err)
 		}
 
 		reminders = append(reminders, ReminderResponse{
-			ID:        id,
-			UserID:    userID,
-			Email:     email,
-			Title:     title,
-			Body:      body,
-			Type:      reminderType,
-			Status:    status,
-			Template:  template,
-			ExecuteAt: currentTime,
+			ID:             id,
+			UserID:         userID,
+			Email:          email,
+			Title:          title,
+			Body:           body,
+			Type:           reminderType,
+			Status:         status,
+			Template:       template,
+			ExecuteAt:      currentTime,
+			SourceType:     "birthday",
+			FriendUsername: birthdayUserName,
+			FriendName:     birthdayName,
 		})
 	}
 
