@@ -113,7 +113,9 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 			log.Printf("error enqueuing scheduled reminder (email notification): %s : %v", err, reminder)
 		}
 
-		err = store.UpdateReminder(reminder.ID)
+		data := UpdateReminder{Status: "scheduled"}
+
+		err = store.UpdateReminder(reminder.ID, data)
 
 		if err != nil {
 			return fmt.Errorf("error updating reminder: %v", err)

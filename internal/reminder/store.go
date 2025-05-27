@@ -23,11 +23,15 @@ type CreateReminderBody struct {
 	ExecuteAt      *time.Time `json:"execute_at"`
 }
 
+type UpdateReminder struct {
+	Status string
+}
+
 type Store interface {
 	CreateReminder(body CreateReminderBody) error
 	GetReminders(currentTime *time.Time) ([]ReminderResponse, error)
 	GetBirthdays(currentTime *time.Time) ([]ReminderResponse, error)
-	UpdateReminder(ID int) error
+	UpdateReminder(ID int, data UpdateReminder) error
 	DeleteReminder(sourceType string, sourceID int) error
 }
 
@@ -99,8 +103,8 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	friends := make([]friend, 0)
 	for rows.Next() {
 		var friendData friend
-		if err := rows.Scan(&friendData.ID, &friendData.Email); err != nil {
-			return fmt.Errorf("scan friend: %w", err)
+		if err := rows.Scan(&friendData.ID, &friendData.Email, &friendData.Username); err != nil {
+			return fmt.Errorf("error scanning friend: %w", err)
 		}
 		friends = append(friends, friendData)
 	}
@@ -160,14 +164,6 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Template, &reminder.FriendName, &reminder.FriendUsername, &reminder.Username)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
-		}
-
-		_, err = tx.Exec(ctx, `
-        UPDATE reminders SET status = 'scheduled' WHERE id = $1`,
-			reminder.ID)
-
-		if err != nil {
-			return nil, err
 		}
 
 		reminders = append(reminders, reminder)
@@ -266,6 +262,29 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	return reminders, nil
 }
 
-func (t *ReminderStore) UpdateReminder(ID int) error {
+func (t *ReminderStore) UpdateReminder(ID int, data UpdateReminder) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := t.DB.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+			UPDATE reminders SET status = $1 WHERE id = $2;
+			`
+
+	_, err = tx.Exec(ctx, query, data.Status, ID)
+
+	if err != nil {
+		return fmt.Errorf("error updating reminder: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	return nil
 }

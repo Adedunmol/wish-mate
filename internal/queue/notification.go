@@ -48,8 +48,10 @@ func WrapHandler(store notification.Store) func(ctx context.Context, t *asynq.Ta
 		})
 
 		if err != nil {
-			return fmt.Errorf("error creating notification: %w", err)
+			return fmt.Errorf("error creating notification from queue: %w", err)
 		}
+
+		log.Printf("notification %d created", payload.ID)
 
 		return nil
 	}
