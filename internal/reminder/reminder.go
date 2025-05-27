@@ -82,7 +82,7 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 				"id":      reminder.ID,
 				"user_id": reminder.UserID,
 				"title":   reminder.Title,
-				"body":    reminder.Title,
+				"body":    reminder.Body,
 				"type":    reminder.Type,
 			},
 		})
