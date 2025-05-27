@@ -54,11 +54,11 @@ func (s *StubStore) GetReminders(currentTime *time.Time) ([]reminder.ReminderRes
 	return result, nil
 }
 
-func (s *StubStore) GetBirthdays(currentTime *time.Time) ([]reminder.ReminderResponse, error) {
+func (s *StubStore) GetBirthdays(_ *time.Time) ([]reminder.ReminderResponse, error) {
 	return nil, nil
 }
 
-func (s *StubStore) UpdateReminder(id int) error {
+func (s *StubStore) UpdateReminder(_ int, _ reminder.UpdateReminder) error {
 	return nil
 }
 
