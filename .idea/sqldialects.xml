@@ -2,5 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/internal/database/migrations/20250301175927_add_user_table.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/internal/database/migrations/20250523162345_add_source_type_and_id_reminders.sql" dialect="PostgreSQL" />
   </component>
 </project>

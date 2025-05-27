@@ -10,7 +10,7 @@ import (
 type CreateReminderBody struct {
 	Template       string     `json:"template"`
 	SourceType     string     `json:"source_type"`
-	SourceId       string     `json:"source_id"`
+	SourceId       int        `json:"source_id"`
 	Name           string     `json:"name"`
 	Email          string     `json:"email"`
 	Username       string     `json:"username"`

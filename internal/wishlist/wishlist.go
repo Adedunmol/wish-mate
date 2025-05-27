@@ -96,11 +96,15 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		Template: "wishlist_reminder_mail",
 		Email:    userData.Email,
 		//Name:      "Wishlist",
-		UserID:    userData.ID,
-		Title:     "Wishlist Reminder",
-		Body:      fmt.Sprintf("%s created a wishlist for a special date %s. kindly check it out.", userData.Username, wishlist.Date.Format("2006-01-02")),
-		Type:      "wishlist_reminder", // wishlist_reminder reminder or birthday
-		ExecuteAt: &scheduledDate,
+		FriendName:     userData.FirstName,
+		FriendUsername: userData.Username,
+		SourceType:     "wishlist",
+		SourceId:       data.ID,
+		UserID:         userData.ID,
+		Title:          "Wishlist Reminder",
+		Body:           fmt.Sprintf("%s created a wishlist for a special date %s. kindly check it out.", userData.Username, wishlist.Date.Format("2006-01-02")),
+		Type:           "wishlist_reminder", // wishlist_reminder reminder or birthday
+		ExecuteAt:      &scheduledDate,
 	}
 
 	err = h.ReminderStore.CreateReminder(reminderBody)
