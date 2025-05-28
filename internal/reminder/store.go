@@ -210,7 +210,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 
 	insertQuery := `
 		INSERT INTO reminders (user_id, email, title, body, type, status, template, execute_at, source_type, friend_name, friend_username, username)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'birthday', $10, $11, $12)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id;
 	`
 
@@ -241,7 +241,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		body := "Wish " + entry.birthdayUserName + " a fantastic birthday today!"
 		reminderType := "birthday"
 		status := "pending"
-		template := "birthday_reminder_mail.html"
+		template := "birthday_reminder_mail"
 
 		var id int
 		err = tx.QueryRow(ctx, insertQuery,

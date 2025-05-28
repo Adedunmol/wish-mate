@@ -102,12 +102,12 @@ func EnqueueReminders(store Store, q queue.Queue, currentTime *time.Time) error 
 					Username       string
 					FriendName     string
 					FriendUsername string
-					Date           *time.Time
+					Date           string
 				}{
 					Username:       reminder.Username,
 					FriendName:     reminder.FriendName,
 					FriendUsername: reminder.FriendUsername,
-					Date:           reminder.ExecuteAt,
+					Date:           reminder.ExecuteAt.Format(time.RFC1123),
 				},
 			},
 		})
