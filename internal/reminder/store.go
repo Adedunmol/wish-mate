@@ -21,6 +21,7 @@ type CreateReminderBody struct {
 	FriendUsername string     `json:"friend_username"`
 	Type           string     `json:"type"` // wishlist_reminder // todo: event_reminder
 	ExecuteAt      *time.Time `json:"execute_at"`
+	Date           *time.Time `json:"date"`
 }
 
 type UpdateReminder struct {
@@ -112,9 +113,9 @@ func (t *ReminderStore) CreateReminder(body CreateReminderBody) error {
 	// Create reminders for friends
 	for _, friend := range friends {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO reminders (user_id, title, body, type, execute_at, template, email, source_type, source_id, friend_name, friend_username, username)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
-		`, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email, body.SourceType, body.SourceId, body.FriendName, body.FriendUsername, friend.Username)
+			INSERT INTO reminders (user_id, title, body, type, execute_at, template, email, source_type, source_id, friend_name, friend_username, username, date)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+		`, friend.ID, body.Title, body.Body, body.Type, body.ExecuteAt, body.Template, friend.Email, body.SourceType, body.SourceId, body.FriendName, body.FriendUsername, friend.Username, body.Date)
 		if err != nil {
 			return fmt.Errorf("create reminder for friend %d: %w", friend.ID, err)
 		}
@@ -148,7 +149,7 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT id, user_id, email, title, body, type, status, execute_at, template, friend_name, friend_username, username FROM reminders WHERE execute_at <= NOW();
+		SELECT id, user_id, email, title, body, type, status, execute_at, template, friend_name, friend_username, username, date FROM reminders WHERE execute_at <= NOW();
 `
 	var reminders []ReminderResponse
 
@@ -161,7 +162,7 @@ func (t *ReminderStore) GetReminders(currentTime *time.Time) ([]ReminderResponse
 	for rows.Next() {
 		var reminder ReminderResponse
 
-		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Template, &reminder.FriendName, &reminder.FriendUsername, &reminder.Username)
+		err = rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Email, &reminder.Title, &reminder.Body, &reminder.Type, &reminder.Status, &reminder.ExecuteAt, &reminder.Template, &reminder.FriendName, &reminder.FriendUsername, &reminder.Username, &reminder.Date)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rows: %w", err)
 		}
@@ -227,7 +228,7 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 	for rows.Next() {
 		var entry birthdayEntry
 
-		err := rows.Scan(&entry.userID, &entry.email, &entry.username, &entry.birthdayUserID, &entry.birthdayUserName, &entry.birthdayName, &entry.birthdayUserName, &entry.birthdayName)
+		err := rows.Scan(&entry.userID, &entry.email, &entry.username, &entry.birthdayUserID, &entry.birthdayUserName, &entry.birthdayName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}

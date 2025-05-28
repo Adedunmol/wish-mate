@@ -24,6 +24,7 @@ type ReminderResponse struct {
 	FriendName     string     `json:"friend_name"`
 	FriendUsername string     `json:"friend_username"`
 	ExecuteAt      *time.Time `json:"execute_at"`
+	Date           *time.Time `json:"date"`
 }
 
 func CreateReminder(store Store, body CreateReminderBody) error {

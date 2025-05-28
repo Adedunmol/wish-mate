@@ -105,6 +105,7 @@ func (h *Handler) CreateWishlist(responseWriter http.ResponseWriter, request *ht
 		Body:           fmt.Sprintf("%s created a wishlist for a special date %s. kindly check it out.", userData.Username, wishlist.Date.Format("2006-01-02")),
 		Type:           "wishlist_reminder", // wishlist_reminder reminder or birthday
 		ExecuteAt:      &scheduledDate,
+		Date:           data.Date,
 	}
 
 	err = h.ReminderStore.CreateReminder(reminderBody)
