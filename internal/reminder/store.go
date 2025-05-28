@@ -213,36 +213,46 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 		RETURNING id;
 	`
 
-	for rows.Next() {
-		var userID int
-		var email string
-		var birthdayUserID int
-		var birthdayUserName string
-		var birthdayName string
-		var username string
+	type birthdayEntry struct {
+		userID           int
+		email            string
+		birthdayUserID   int
+		birthdayUserName string
+		birthdayName     string
+		username         string
+	}
 
-		err := rows.Scan(&userID, &email, &username, &birthdayUserID, &birthdayUserName, &birthdayName, &birthdayUserName, &birthdayName)
+	var entries []birthdayEntry
+
+	for rows.Next() {
+		var entry birthdayEntry
+
+		err := rows.Scan(&entry.userID, &entry.email, &entry.username, &entry.birthdayUserID, &entry.birthdayUserName, &entry.birthdayName, &entry.birthdayUserName, &entry.birthdayName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
 
-		title := "🎉 It's " + birthdayUserName + "'s Birthday!"
-		body := "Wish " + birthdayUserName + " a fantastic birthday today!"
+		entries = append(entries, entry)
+	}
+
+	for _, entry := range entries {
+		title := "🎉 It's " + entry.birthdayUserName + "'s Birthday!"
+		body := "Wish " + entry.birthdayUserName + " a fantastic birthday today!"
 		reminderType := "birthday"
 		status := "pending"
 		template := "birthday_reminder_mail.html"
 
 		var id int
 		err = tx.QueryRow(ctx, insertQuery,
-			userID, email, title, body, reminderType, status, template, currentTime, "birthday", birthdayName, birthdayUserName, username).Scan(&id)
+			entry.userID, entry.email, title, body, reminderType, status, template, currentTime, "birthday", entry.birthdayName, entry.birthdayUserName, entry.username).Scan(&id)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting reminder: %w", err)
 		}
 
 		reminders = append(reminders, ReminderResponse{
 			ID:             id,
-			UserID:         userID,
-			Email:          email,
+			UserID:         entry.userID,
+			Email:          entry.email,
 			Title:          title,
 			Body:           body,
 			Type:           reminderType,
@@ -250,8 +260,8 @@ func (t *ReminderStore) GetBirthdays(currentTime *time.Time) ([]ReminderResponse
 			Template:       template,
 			ExecuteAt:      currentTime,
 			SourceType:     "birthday",
-			FriendUsername: birthdayUserName,
-			FriendName:     birthdayName,
+			FriendUsername: entry.birthdayUserName,
+			FriendName:     entry.birthdayName,
 		})
 	}
 
