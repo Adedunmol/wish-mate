@@ -32,14 +32,12 @@ func SetupRoutes(config config.Config) {
 	})
 
 	config.Router.Route("/docs", func(r chi.Router) {
-		// Serve the embedded Swagger UI assets
 		r.Mount("/", v5emb.New(
 			"My API Docs",
-			"/docs/swagger.json", // URL Swagger UI fetches
-			"/docs",              // BasePath must match route
+			"/docs/swagger.json",
+			"/docs",
 		))
 
-		// Serve swagger.json file from ./docs folder
 		r.Get("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
 			http.ServeFile(w, req, "./docs/swagger.json")
 		})
