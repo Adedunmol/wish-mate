@@ -39,17 +39,11 @@ $ cd wish-mate
 $ docker-compose -f docker-compose.dev.yml up --build -d
 ```
 
-4. Migrate the database:
-Set the database driver and connection string by setting GOOSE_DRIVER and GOOSE_DBSTRING in the .env file
-```bash
-$ goose up
-```
+4. Navigate to this endpoint `http://localhost:{PORT}/docs` to access the docs. PORT is the port defined in the `.env` file.
 
-5. Navigate to this endpoint `http://localhost:{PORT}/docs` to access the docs. PORT is the port defined in the `.env` file.
-
-6. To stop the running containers, use:
+5. To stop the running containers, use:
 ```bash
-$ docker-compose down
+$ docker-compose -f docker-compose.dev.yml down
 ```
 
 ### Further improvements
