@@ -6,6 +6,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/config"
 	"github.com/Adedunmol/wish-mate/internal/friendship"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/swaggest/swgui/v5emb"
 	"log"
@@ -30,11 +31,19 @@ func SetupRoutes(config config.Config) {
 		}
 	})
 
-	config.Router.Handle("/docs", v5emb.New(
-		"Wishmate",
-		"/docs/swagger.json",
-		"/docs",
-	))
+	config.Router.Route("/docs", func(r chi.Router) {
+		// Serve the embedded Swagger UI assets
+		r.Mount("/", v5emb.New(
+			"My API Docs",
+			"/docs/swagger.json", // URL Swagger UI fetches
+			"/docs",              // BasePath must match route
+		))
+
+		// Serve swagger.json file from ./docs folder
+		r.Get("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
+			http.ServeFile(w, req, "./docs/swagger.json")
+		})
+	})
 
 	auth.AuthRoutes(config)
 	friendship.FriendshipRoutes(config)
