@@ -1,0 +1,69 @@
+# See https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
+run:
+  tests: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  gocyclo:
+    min-complexity: 20
+  dupl:
+    threshold: 100
+  misspell:
+    locale: US
+  unparam:
+    check-exported: true
+
+linters:
+  enable-all: true
+  disable:
+    - tenv
+    - intrange
+    - copyloopvar
+    - lll
+    - gochecknoglobals
+    - wrapcheck
+    - paralleltest
+    - forbidigo
+    - forcetypeassert
+    - varnamelen
+    - tagliatelle
+    - errname
+    - ireturn
+    - exhaustruct
+    - nonamedreturns
+    - testableexamples
+    - dupword
+    - depguard
+    - tagalign
+    - mnd
+    - testifylint
+    - recvcheck
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    - linters:
+        - revive
+      text: var-naming
+    - linters:
+        - stylecheck
+      text: ST1003
+    - linters:
+        - mnd
+        - goconst
+        - noctx
+        - funlen
+        - dupl
+        - unused
+        - unparam
+      path: "_test.go"
+    - linters:
+        - errcheck # Error checking omitted for brevity.
+        - gosec
+      path: "example_"
+    - linters:
+        - revive
+      text: "unused-parameter: parameter"
+

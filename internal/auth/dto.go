@@ -6,15 +6,15 @@ import (
 )
 
 type User struct {
-	ID           int
-	FirstName    string
-	LastName     string
-	Username     string
-	Email        string
-	Password     string
-	DateOfBirth  *time.Time
-	Verified     bool
-	RefreshToken string
+	ID           int        `json:"id"`
+	FirstName    string     `json:"first_name"`
+	LastName     string     `json:"last_name"`
+	Username     string     `json:"username"`
+	Email        string     `json:"email"`
+	Password     string     `json:"-"`
+	DateOfBirth  *time.Time `json:"date_of_birth"`
+	Verified     bool       `json:"verified"`
+	RefreshToken string     `json:"-"`
 }
 
 type CreateUserBody struct {

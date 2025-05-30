@@ -1,0 +1,2316 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "My Project",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "wishmate"
+    },
+    {
+      "name": "wishmate/auth"
+    },
+    {
+      "name": "wishmate/friendship"
+    },
+    {
+      "name": "wishmate/wishlist"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "first_name": "Adebayo",
+                "last_name": "Oyewale",
+                "username": "Adebayo",
+                "email": "dumex672@gmail.com",
+                "password": "password",
+                "date_of_birth": "2000-11-06"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "first_name": {
+                          "type": "string"
+                        },
+                        "last_name": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "first_name",
+                        "last_name",
+                        "username"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "User created successfully",
+                  "data": {
+                    "id": 15,
+                    "first_name": "Adedunmola",
+                    "last_name": "Oyewale",
+                    "username": "Adedunmola"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "resource already exists"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login User",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              },
+              "example": {
+                "email": "dumex672@gmail.com",
+                "password": "password"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "expiration": {
+                          "type": "integer"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "expiration",
+                        "token"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "User logged in",
+                  "data": {
+                    "expiration": 1800000000000,
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im95ZXdhbGVhZGVkdW5tb2xhQGdtYWlsLmNvbSIsImV4cCI6MTc0NzQxNDUxMywidXNlcl9pZCI6MTgsInZlcmlmaWVkIjpmYWxzZX0.9kVS_6_yubRAnirIbbsomp0ND8U8MygIMsZvVOLxY1s"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout User",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "User logged out successfully"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/request-code": {
+      "post": {
+        "summary": "Request Code",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "email": "dumex672@gmail.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Code has been sent successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "summary": "Verify User",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "email": "dumex672@gmail.com",
+                "code": "117029"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "User verified successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/refresh-token": {
+      "get": {
+        "summary": "Refresh Token",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "email": "oyewaleadedunmola@gmail.com",
+                "password": "password"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "expiration": {
+                          "type": "integer"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "expiration",
+                        "token"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/forgot-password-request": {
+      "post": {
+        "summary": "Forgot Password Request",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "email": "oyewaleadedunmola@gmail.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Forgot Password",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "email": "oyewaleadedunmola@gmail.com",
+                "code": "099888",
+                "new_password": "password",
+                "new_password_confirm": "password"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Password has been reset successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "examples": {
+                  "1": {
+                    "summary": "Exception",
+                    "value": {
+                      "message": "invalid otp"
+                    }
+                  },
+                  "2": {
+                    "summary": "Success",
+                    "value": {
+                      "status": "Success",
+                      "message": "Password has been reset successfully"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Reset Password",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "old_password": "password",
+                "new_password": "password",
+                "new_password_confirm": "password"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Password has been reset successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/users/18/friend_requests/": {
+      "get": {
+        "summary": "Get All Friendships",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/friendship"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Friendships retrieved successfully",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/users/18/friend_requests": {
+      "post": {
+        "summary": "Send A Friend Request",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/friendship"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "recipient_id": 19
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Friendship created successfully",
+                  "data": {
+                    "user_id": 18,
+                    "friend_id": 19,
+                    "status": "pending"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/users/19/friend_requests/18": {
+      "patch": {
+        "summary": "Update A Friend Request",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/friendship"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "type": "accept"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "Get Frienship",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/friendship"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "integer"
+                        },
+                        "friend_id": {
+                          "type": "integer"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "friend_since": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "user_id",
+                        "friend_id",
+                        "status",
+                        "friend_since"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Friendship retrieved successfully",
+                  "data": {
+                    "user_id": 19,
+                    "friend_id": 18,
+                    "status": "accepted",
+                    "friend_since": "2025-05-19T14:38:32.898579Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists": {
+      "post": {
+        "summary": "Create A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "name": "Birthday",
+                "description": "Some random description",
+                "notify_before": 0,
+                "items": [
+                  {
+                    "name": "phone",
+                    "description": "a brand new phone",
+                    "link": "some random link"
+                  }
+                ],
+                "date": "2025-05-27T00:00:00Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "user_id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "notify_before": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "name",
+                        "description",
+                        "notify_before",
+                        "date"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "examples": {
+                  "1": {
+                    "summary": "Success",
+                    "value": {
+                      "status": "Success",
+                      "message": "Wishlist created successfully",
+                      "data": {
+                        "id": 12,
+                        "user_id": 19,
+                        "name": "Birthday",
+                        "description": "Some random description",
+                        "notify_before": 10,
+                        "date": "2000-11-06T00:00:00Z"
+                      }
+                    }
+                  },
+                  "2": {
+                    "summary": "Success",
+                    "value": {
+                      "status": "Success",
+                      "message": "Wishlist created successfully",
+                      "data": {
+                        "id": 16,
+                        "user_id": 19,
+                        "name": "Birthday",
+                        "description": "Some random description",
+                        "notify_before": 10,
+                        "date": "2000-11-06T00:00:00Z",
+                        "items": [
+                          {
+                            "id": 3,
+                            "name": "phone",
+                            "description": "a brand new phone",
+                            "taken": false,
+                            "link": "some random link"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/users/19": {
+      "get": {
+        "summary": "Get User's Wishlists",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "user_id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "notify_before": {
+                            "type": "integer"
+                          },
+                          "date": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "user_id",
+                          "name",
+                          "description",
+                          "notify_before",
+                          "date"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Wishlists retrieved successfully",
+                  "data": [
+                    {
+                      "id": 4,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 5,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 6,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 7,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 8,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 9,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 10,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 11,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    },
+                    {
+                      "id": 12,
+                      "user_id": 19,
+                      "name": "Birthday",
+                      "description": "Some random description",
+                      "notify_before": 10,
+                      "date": "2000-11-06T00:00:00Z"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "x-401:Invalid Credentials": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/15": {
+      "get": {
+        "summary": "Get A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "user_id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "notify_before": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "taken": {
+                                "type": "boolean"
+                              },
+                              "link": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "name",
+                        "description",
+                        "notify_before",
+                        "date",
+                        "items"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Wishlist retrieved successfully",
+                  "data": {
+                    "id": 15,
+                    "user_id": 19,
+                    "name": "Birthday",
+                    "description": "Some random description",
+                    "notify_before": 10,
+                    "date": "2000-11-06T00:00:00Z",
+                    "items": [
+                      {
+                        "id": 2,
+                        "name": "phone",
+                        "description": "a brand new phone",
+                        "taken": false,
+                        "link": "some random link"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "examples": {
+                  "1": {
+                    "summary": "Exception",
+                    "value": {
+                      "message": "resource not found"
+                    }
+                  },
+                  "2": {
+                    "summary": "Success",
+                    "value": {
+                      "status": "Success",
+                      "message": "Wishlist retrieved successfully",
+                      "data": {
+                        "id": 15,
+                        "user_id": 19,
+                        "name": "Birthday",
+                        "description": "Some random description",
+                        "notify_before": 10,
+                        "date": "2000-11-06T00:00:00Z",
+                        "items": [
+                          {
+                            "id": 2,
+                            "name": "phone",
+                            "description": "a brand new phone",
+                            "taken": false,
+                            "link": "some random link"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "name": "Birthday party"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Wishlist updated successfully",
+                  "data": {
+                    "id": 15,
+                    "user_id": 19,
+                    "name": "Birthday party",
+                    "description": "Some random description",
+                    "notify_before": 10,
+                    "date": "2000-11-06T00:00:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Wishlist deleted successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/16/items": {
+      "post": {
+        "summary": "Create An Item For A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "name": "shoe",
+                "description": "birkenstock"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "taken": {
+                          "type": "boolean"
+                        },
+                        "link": {
+                          "type": "string"
+                        },
+                        "wishlist_id": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "taken",
+                        "link",
+                        "wishlist_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Item created successfully",
+                  "data": {
+                    "id": 5,
+                    "name": "shoe",
+                    "description": "birkenstock",
+                    "taken": false,
+                    "link": "",
+                    "wishlist_id": 16
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/16/items/5": {
+      "get": {
+        "summary": "Get An Item From A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update An Item",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "example": {
+                "name": "shoe",
+                "description": "birkenstock",
+                "link": "some random link"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Item updated successfully",
+                  "data": {
+                    "id": 5,
+                    "name": "shoe",
+                    "description": "birkenstock",
+                    "taken": false,
+                    "link": "some random link"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid request body"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/20/items/12/pick": {
+      "patch": {
+        "summary": "Pick An Item",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Item picked successfully",
+                  "data": {
+                    "id": 5,
+                    "name": "shoe",
+                    "description": "birkenstock",
+                    "taken": true,
+                    "link": "some random link"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "item has been picked already"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/wishlists/16/items/4": {
+      "delete": {
+        "summary": "Delete An Item From A Wishlist",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate/wishlist"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                },
+                "example": {
+                  "status": "Success",
+                  "message": "Item deleted successfully"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": {
+                  "message": "invalid credentials"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "forbidden from accessing the resource"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Home",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "wishmate"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

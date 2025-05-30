@@ -7,6 +7,7 @@ import (
 	"github.com/Adedunmol/wish-mate/internal/friendship"
 	"github.com/Adedunmol/wish-mate/internal/wishlist"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/swaggest/swgui/v5emb"
 	"log"
 	"net/http"
 )
@@ -28,6 +29,12 @@ func SetupRoutes(config config.Config) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	})
+
+	config.Router.Handle("/docs", v5emb.New(
+		"Wishmate",
+		"/docs/swagger.json",
+		"/docs",
+	))
 
 	auth.AuthRoutes(config)
 	friendship.FriendshipRoutes(config)
